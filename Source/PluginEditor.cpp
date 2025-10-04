@@ -10,8 +10,8 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p, std::atomic<float>& measuredFreq)
+    : AudioProcessorEditor (&p), audioProcessor (p), measuredFrequency(measuredFreq)
 {
     auto& apvts = audioProcessor.apvts;
 
@@ -23,6 +23,17 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p)
     betaKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
     addAndMakeVisible(timestepKnob);
     timestepKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+
+    addAndMakeVisible(targetFrequencyKnob);
+    targetFrequencyKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+
+    addAndMakeVisible(kpKnob);
+    kpKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(kiKnob);
+    kiKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(kdKnob);
+    kdKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+
 
     addAndMakeVisible(levelXKnob);
     levelXKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
@@ -42,6 +53,19 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p)
     addAndMakeVisible(outputLevelKnob);
     outputLevelKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
     
+    addAndMakeVisible(mxKnob);
+    mxKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(myKnob);
+    myKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(mzKnob);
+    mzKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(cxKnob);
+    cxKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(cyKnob);
+    cyKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(czKnob);
+    czKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+
     addAndMakeVisible(attractorComponent);
 
     addAndMakeVisible(viewZoomXSlider);
@@ -64,11 +88,32 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p)
     viewZoomZLabel.attachToComponent(&viewZoomZSlider, true);
     viewZoomZLabel.setJustificationType(juce::Justification::centredRight);
 
+    addAndMakeVisible(resetButton);
+    resetButton.onClick = [this]
+    {
+        audioProcessor.requestOscillatorReset();
+    };
+
+    addAndMakeVisible(measuredFrequencyLabel);
+    measuredFrequencyLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    measuredFrequencyLabel.setJustificationType(juce::Justification::centred);
+    measuredFrequencyLabel.setText("--- Hz", juce::dontSendNotification);
+
+    startTimerHz(30); // Update the frequency display 30 times per second
+
     setSize (1024, 600);
 }
 
 LorenzAudioProcessorEditor::~LorenzAudioProcessorEditor()
 {
+    stopTimer();
+}
+
+void LorenzAudioProcessorEditor::timerCallback()
+{
+    float freq = measuredFrequency.load();
+    juce::String freqText = (freq > 0.0f) ? juce::String(freq, 1) + " Hz" : "--- Hz";
+    measuredFrequencyLabel.setText(freqText, juce::dontSendNotification);
 }
 
 //==============================================================================
@@ -81,19 +126,24 @@ void LorenzAudioProcessorEditor::paint (juce::Graphics& g)
 void LorenzAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
+    
+    // Define a top area for the main controls and a bottom area for the new knobs
+    auto bottomArea = bounds.removeFromBottom(120);
+    auto topArea = bounds;
 
     const int knobSize = 80;
     const int knobSpacing = 100;
     const int groupSpacing = 30;
 
     // Attractor Parameters Column
-    auto attractorBounds = bounds.removeFromLeft(knobSpacing);
+    auto attractorBounds = topArea.removeFromLeft(knobSpacing);
     sigmaKnob.setBounds(attractorBounds.removeFromTop(knobSize));
     rhoKnob.setBounds(attractorBounds.removeFromTop(knobSize));
     betaKnob.setBounds(attractorBounds.removeFromTop(knobSize));
-    timestepKnob.setBounds(attractorBounds.removeFromTop(knobSize));
+    timestepKnob.setBounds(attractorBounds.removeFromTop(knobSize).withY(betaKnob.getBottom()));
+    resetButton.setBounds(attractorBounds.getX(), timestepKnob.getBottom() + 10, attractorBounds.getWidth(), 24);
 
-    auto rightSide = bounds.removeFromRight(bounds.getWidth() / 2);
+    auto rightSide = topArea.removeFromRight(topArea.getWidth() / 2);
     auto attractorViewBounds = rightSide.reduced(10);
 
     viewZoomZSlider.setBounds(attractorViewBounds.removeFromRight(20));
@@ -101,26 +151,39 @@ void LorenzAudioProcessorEditor::resized()
 
     attractorComponent.setBounds(attractorViewBounds);
 
-    auto leftSide = bounds;
+    auto leftSide = topArea;
     leftSide.removeFromLeft(groupSpacing);
 
+    // --- Frequency Control Column ---
+    auto freqControlBounds = leftSide.removeFromLeft(knobSpacing);
+    measuredFrequencyLabel.setBounds(freqControlBounds.getX(), betaKnob.getY() - 20, freqControlBounds.getWidth(), 20);
+    targetFrequencyKnob.setBounds(freqControlBounds.getX(), betaKnob.getY(), knobSize, knobSize);
+    kpKnob.setBounds(freqControlBounds.getX(), targetFrequencyKnob.getBottom(), knobSize / 2, knobSize / 2);
+    kiKnob.setBounds(freqControlBounds.getX() + knobSize / 2, targetFrequencyKnob.getBottom(), knobSize / 2, knobSize / 2);
+    kdKnob.setBounds(freqControlBounds.getX(), kpKnob.getBottom(), knobSize, knobSize);
+
+
     // Mixer Columns
-    auto mixerBounds = leftSide.removeFromLeft(knobSpacing * 3);
-    auto xBounds = mixerBounds.removeFromLeft(knobSpacing);
-    levelXKnob.setBounds(xBounds.removeFromTop(knobSize));
-    panXKnob.setBounds(xBounds.removeFromTop(knobSize));
-    
-    auto yBounds = mixerBounds.removeFromLeft(knobSpacing);
-    levelYKnob.setBounds(yBounds.removeFromTop(knobSize));
-    panYKnob.setBounds(yBounds.removeFromTop(knobSize));
-    
-    auto zBounds = mixerBounds.removeFromLeft(knobSpacing);
-    levelZKnob.setBounds(zBounds.removeFromTop(knobSize));
-    panZKnob.setBounds(zBounds.removeFromTop(knobSize));
+    levelXKnob.setBounds(leftSide.removeFromLeft(knobSpacing).removeFromTop(knobSize));
+    panXKnob.setBounds(leftSide.getX() - knobSpacing, knobSize, knobSize, knobSize);
+    levelYKnob.setBounds(leftSide.removeFromLeft(knobSpacing).removeFromTop(knobSize));
+    panYKnob.setBounds(leftSide.getX() - knobSpacing, knobSize, knobSize, knobSize);
+    levelZKnob.setBounds(leftSide.removeFromLeft(knobSpacing).removeFromTop(knobSize));
+    panZKnob.setBounds(leftSide.getX() - knobSpacing, knobSize, knobSize, knobSize);
     
     leftSide.removeFromLeft(groupSpacing);
 
     // Output Column
     auto outputBounds = leftSide.removeFromLeft(knobSpacing);
     outputLevelKnob.setBounds(outputBounds.withSize(knobSize, knobSize).withY(0));
+
+    // --- Second Order Parameters (Bottom Row) ---
+    bottomArea.removeFromLeft(groupSpacing); // Add some padding
+    mxKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
+    myKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
+    mzKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
+    bottomArea.removeFromLeft(groupSpacing); // Space between groups
+    cxKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
+    cyKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
+    czKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
 }

@@ -24,6 +24,7 @@ LorenzAudioProcessor::LorenzAudioProcessor()
       sigmaParam(apvts.getRawParameterValue("SIGMA")),
       rhoParam(apvts.getRawParameterValue("RHO")),
       betaParam(apvts.getRawParameterValue("BETA")),
+      timestepRangedParam(static_cast<juce::RangedAudioParameter*>(apvts.getParameter("TIMESTEP"))),
       timestepParam(apvts.getRawParameterValue("TIMESTEP")),
       levelXParam(apvts.getRawParameterValue("LEVEL_X")),
       panXParam(apvts.getRawParameterValue("PAN_X")),
@@ -33,10 +34,23 @@ LorenzAudioProcessor::LorenzAudioProcessor()
       panZParam(apvts.getRawParameterValue("PAN_Z")),
       outputLevelParam(apvts.getRawParameterValue("OUTPUT_LEVEL")),
       viewZoomXParam(apvts.getRawParameterValue("VIEW_ZOOM_X")),
-      viewZoomZParam(apvts.getRawParameterValue("VIEW_ZOOM_Z"))
+      viewZoomZParam(apvts.getRawParameterValue("VIEW_ZOOM_Z")),
+      targetFrequencyParam(apvts.getRawParameterValue("TARGET_FREQ")),
+      kpParam(apvts.getRawParameterValue("KP")),
+      kiParam(apvts.getRawParameterValue("KI")),
+      kdParam(apvts.getRawParameterValue("KD")),
+      pitchDetector(44100.0, PITCHBUFFERSIZE), // Initialize with a default sample rate
+      mxParam(apvts.getRawParameterValue("MX")), //
+      myParam(apvts.getRawParameterValue("MY")),
+      mzParam(apvts.getRawParameterValue("MZ")),
+      cxParam(apvts.getRawParameterValue("CX")),
+      cyParam(apvts.getRawParameterValue("CY")),
+      czParam(apvts.getRawParameterValue("CZ"))
 #endif // JucePlugin_PreferredChannelConfigurations
 {
+    dtTarget = timestepParam->load();
 }
+
 
 LorenzAudioProcessor::~LorenzAudioProcessor()
 {
@@ -109,12 +123,21 @@ void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
 {
     lorenzOsc.prepareToPlay(sampleRate);
 
-    // Pass the parameter pointers to the oscillator. This only needs to be done once.
-    lorenzOsc.setParameters(sigmaParam, rhoParam, betaParam);
+    // Pass the parameter pointers to the oscillator.
+    lorenzOsc.setParameters(sigmaParam, rhoParam, betaParam, mxParam, myParam, mzParam, cxParam, cyParam, czParam);
     lorenzOsc.setTimestep(timestepParam);
 
     // Calculate how many audio samples to wait before generating the next point for the GUI
     pointGenerationInterval = static_cast<int>(sampleRate / pointsPerSecond);
+
+    // Prepare frequency detector
+    nPitchBuffers = PITCHBUFFERSIZE/samplesPerBlock;
+    pitchBufferSize = nPitchBuffers*samplesPerBlock;
+    bufferSize = samplesPerBlock;
+
+    pitchDetector.setBufferSize (pitchBufferSize);
+    pitchDetector.setSampleRate (sampleRate);
+    analysisBuffer.setSize(1, pitchBufferSize);
 }
 
 void LorenzAudioProcessor::releaseResources()
@@ -161,12 +184,28 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     // This is here to avoid people getting screaming feedback
     // when they first compile a plugin.
     // As our oscillator is generating the signal, we can clear the buffer first.
+
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
     // Get pointers to the left and right channels.
     auto* leftChannel = buffer.getWritePointer(0);
     auto* rightChannel = buffer.getWritePointer(1);
+
+    // --- Handle reset request ---
+    if (resetRequested.exchange(false))
+    {
+        lorenzOsc.reset();
+        // Also reset the PI controller state
+        dtIntegral = 0.0f;
+        dtProportional = 0.0f;
+        // Reset dtTarget to the current slider value, not the last controlled value
+        dtTarget = apvts.getParameter("TIMESTEP")->getValue() * (0.01f - 0.0001f) + 0.0001f;
+        *timestepParam = dtTarget;
+        lastError = 0.0f;
+        measuredFrequency = 0.0f;
+        analysisBuffer.clear();
+    }
 
     // Load parameter values.
     const float levelX = juce::Decibels::decibelsToGain(levelXParam->load());
@@ -176,6 +215,7 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     const float levelZ = juce::Decibels::decibelsToGain(levelZParam->load());
     const float panZ = panZParam->load();
     const float outputLevel = juce::Decibels::decibelsToGain(outputLevelParam->load());
+    const float targetFrequency = targetFrequencyParam->load();
 
     // The state variables can have a large range, so we scale them down.
     // These are empirical values, you may want to adjust them.
@@ -213,10 +253,53 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         leftChannel[sample] = (xL + yL + zL) * outputLevel;
         rightChannel[sample] = (xR + yR + zR) * outputLevel;
     }
+    
+    // --- Frequency Detection & Control ---
+    // First, shift the existing data in the analysis buffer to the left
+    analysisBuffer.copyFrom (0, 0, analysisBuffer, 0, buffer.getNumSamples(), analysisBuffer.getNumSamples() - buffer.getNumSamples());
+    // Then, copy the new block of audio into the end of the analysis buffer
+    analysisBuffer.copyFrom (0, analysisBuffer.getNumSamples() - buffer.getNumSamples(), buffer, 0, 0, buffer.getNumSamples());
+
+    // Perform frequency detection on the block
+    float freq = pitchDetector.getPitch(analysisBuffer.getReadPointer(0));
+    if (freq > 0.0f) // YIN returns -1 if no frequency is detected
+        measuredFrequency = freq;
+    else
+        measuredFrequency = 0.0f; // Indicate no frequency found
+
+    // Now, run the PID controller based on the new measurement to determine the timestep for the *next* block.
+    if (targetFrequency > 0.0f) // A target frequency of 0 disables the controller
+    {
+        const float currentError = targetFrequency - measuredFrequency.load();
+
+        // Proportional term
+        const float Kp = kpParam->load();
+        dtProportional = currentError;
+
+        // Integral term
+        const float Ki = kiParam->load();
+        dtIntegral += currentError * Ki;
+        dtIntegral = juce::jlimit(-0.001f, 0.001f, dtIntegral); // Clamp integral term to prevent wind-up
+
+        // Derivative term
+        const float Kd = kdParam->load();
+        dtDerivative = currentError - lastError;
+        lastError = currentError;
+
+        // Update target dt
+        dtTarget += (dtProportional * Kp) + dtIntegral + (dtDerivative * Kd);
+        dtTarget = timestepRangedParam->getNormalisableRange().snapToLegalValue(dtTarget); // Clamp to the parameter's full legal range
+
+        // Convert the real-world value back to a normalized value (0.0 - 1.0)
+        auto normalizedValue = timestepRangedParam->getNormalisableRange().convertTo0to1(dtTarget);
+        // Set the value and notify the host and GUI listeners
+        timestepRangedParam->setValueNotifyingHost(normalizedValue);
+    }
 
     // In case of more than 2 output channels, copy the stereo signal to them.
     for (int channel = 2; channel < totalNumOutputChannels; ++channel)
         buffer.copyFrom(channel, 0, buffer, channel % 2, 0, buffer.getNumSamples());
+
 }
 
 //==============================================================================
@@ -227,7 +310,12 @@ bool LorenzAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* LorenzAudioProcessor::createEditor()
 {
-    return new LorenzAudioProcessorEditor (*this);
+    return new LorenzAudioProcessorEditor (*this, measuredFrequency);
+}
+
+void LorenzAudioProcessor::requestOscillatorReset()
+{
+    resetRequested = true;
 }
 
 //==============================================================================
@@ -270,9 +358,28 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
                                                            8.0f / 3.0f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("TIMESTEP", "Timestep",
-                                                           juce::NormalisableRange<float>(0.0001f, 0.01f, 0.0001f, 0.5f),
-                                                           0.001f));
+                                                           juce::NormalisableRange<float>(0.0001f, 0.02f, 0.000001f, 0.5f), // Max value capped at 0.02 for stability
+                                                           0.01f));
     
+    // --- Frequency Control ---
+    layout.add(std::make_unique<juce::AudioParameterFloat>("TARGET_FREQ", "Target Freq",
+                                                           juce::NormalisableRange<float>(0.0f, 5000.0f, 1.0f, 0.3f),
+                                                           0.0f, "Hz", juce::AudioProcessorParameter::genericParameter, [](float v, int) { return (v > 0.0f) ? juce::String(v, 1) + " Hz" : "Off"; }, nullptr));
+
+    // Use a skewed range for finer control over smaller gain values.
+    // Default values are set to the original stable values.
+    layout.add(std::make_unique<juce::AudioParameterFloat>("KP", "Prop. Gain", 
+                                                           juce::NormalisableRange<float>(0.0f, 1e-5f, 0.0f, 0.25f), 
+                                                           2e-6f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("KI", "Integ. Gain", 
+                                                           juce::NormalisableRange<float>(0.0f, 1e-6f, 0.0f, 0.25f), 
+                                                           5e-8f));
+    // The Kd term often needs a larger magnitude than Kp to be effective.
+    layout.add(std::make_unique<juce::AudioParameterFloat>("KD", "Deriv. Gain",
+                                                           juce::NormalisableRange<float>(0.0f, 1e-4f, 0.0f, 0.25f),
+                                                           0.0000007f));
+
+
     // --- Mixer Parameters ---
     layout.add(std::make_unique<juce::AudioParameterFloat>("LEVEL_X", "Level X",
                                                            juce::NormalisableRange<float>(-60.0f, 0.0f, 0.1f), -6.0f));
@@ -301,6 +408,21 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
     layout.add(std::make_unique<juce::AudioParameterFloat>("VIEW_ZOOM_Z", "View Zoom Z",
                                                            juce::NormalisableRange<float>(10.0f, 100.0f, 0.1f, 0.5f),
                                                            50.0f));
+
+    // --- Second Order Parameters ---
+    layout.add(std::make_unique<juce::AudioParameterFloat>("MX", "Mass X",
+                                                           juce::NormalisableRange<float>(0.01f, 2.0f, 0.01f, 0.5f), 0.01f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("MY", "Mass Y",
+                                                           juce::NormalisableRange<float>(0.01f, 2.0f, 0.01f, 0.5f), 0.01f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("MZ", "Mass Z",
+                                                           juce::NormalisableRange<float>(0.01f, 2.0f, 0.01f, 0.5f), 0.01f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>("CX", "Damping X",
+                                                           juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f, 0.5f), 1.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("CY", "Damping Y",
+                                                           juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f, 0.5f), 1.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("CZ", "Damping Z",
+                                                           juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f, 0.5f), 1.0f));
 
 
     return layout;
