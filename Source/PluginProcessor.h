@@ -11,7 +11,7 @@
 #include <JuceHeader.h>
 #include "LorenzOsc.h"
 
-#define PITCHBUFFERSIZE 2048
+#define PITCHBUFFERSIZE 4096
 
 //==============================================================================
 /**

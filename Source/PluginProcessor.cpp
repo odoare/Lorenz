@@ -397,14 +397,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
     // Default values are set to the original stable values.
     layout.add(std::make_unique<juce::AudioParameterFloat>("KP", "Prop. Gain", 
                                                            juce::NormalisableRange<float>(0.0f, 1e-5f, 0.0f, 0.25f), 
-                                                           2e-6f));
+                                                           1e-6f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("KI", "Integ. Gain", 
                                                            juce::NormalisableRange<float>(0.0f, 1e-6f, 0.0f, 0.25f), 
-                                                           5e-8f));
+                                                           2e-8f));
     // The Kd term often needs a larger magnitude than Kp to be effective.
     layout.add(std::make_unique<juce::AudioParameterFloat>("KD", "Deriv. Gain",
                                                            juce::NormalisableRange<float>(0.0f, 1e-4f, 0.0f, 0.25f),
-                                                           0.0000007f));
+                                                           0.000001f));
 
     layout.add(std::make_unique<juce::AudioParameterChoice>("PITCH_SOURCE", "Pitch Source",
                                                            juce::StringArray { "X", "Y", "Z" },
@@ -457,8 +457,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
 
     // --- Taming Parameter ---
     layout.add(std::make_unique<juce::AudioParameterFloat>("TAMING", "Taming",
-                                                           juce::NormalisableRange<float>(0.0f, 0.1f, 0.0f, 0.25f),
-                                                           0.0f));
+                                                           juce::NormalisableRange<float>(0.0f, 0.001f, 0.0f, 0.25f),
+                                                           0.00001f));
 
 
     return layout;
