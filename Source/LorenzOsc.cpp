@@ -99,7 +99,7 @@ std::tuple<double, double, double> LorenzOsc::getNextSample()
     dt.setTargetValue(dtParam->load());
     
     const float totalDt = dt.getNextValue();
-    constexpr float maxSimulationTimestep = 0.001f;
+    constexpr float maxSimulationTimestep = 0.005f;
 
     // Determine the number of sub-steps needed to keep the simulation stable.
     const int numSubSteps = std::max(1, static_cast<int>(std::ceil(totalDt / maxSimulationTimestep)));
