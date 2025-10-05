@@ -71,6 +71,9 @@ private:
                     cyKnob{audioProcessor.apvts, "CY", juce::Colours::green.brighter(0.5f)},
                     czKnob{audioProcessor.apvts, "CZ", juce::Colours::blue.brighter(0.5f)};
 
+    // Taming Knob
+    fxme::FxmeKnob tamingKnob{audioProcessor.apvts, "TAMING", juce::Colours::purple};
+
     AttractorComponent attractorComponent{audioProcessor};
 
     juce::Slider viewZoomXSlider, viewZoomZSlider;
@@ -78,6 +81,10 @@ private:
 
     juce::Label viewZoomXLabel, viewZoomZLabel;
     juce::Label measuredFrequencyLabel;
+
+    juce::ComboBox pitchSourceSelector;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> pitchSourceAttachment;
+    juce::Label pitchSourceLabel;
 
     juce::TextButton resetButton { "Reset Oscillator" };
 

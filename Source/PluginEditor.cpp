@@ -66,6 +66,9 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     addAndMakeVisible(czKnob);
     czKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
 
+    addAndMakeVisible(tamingKnob);
+    tamingKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+
     addAndMakeVisible(attractorComponent);
 
     addAndMakeVisible(viewZoomXSlider);
@@ -99,9 +102,21 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     measuredFrequencyLabel.setJustificationType(juce::Justification::centred);
     measuredFrequencyLabel.setText("--- Hz", juce::dontSendNotification);
 
+    addAndMakeVisible(pitchSourceSelector);
+    // We must manually populate the ComboBox with the choices from the parameter.
+    if (auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("PITCH_SOURCE")))
+        pitchSourceSelector.addItemList(choiceParam->choices, 1);
+
+    pitchSourceAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "PITCH_SOURCE", pitchSourceSelector);
+
+    addAndMakeVisible(pitchSourceLabel);
+    pitchSourceLabel.setText("Pitch Source", juce::dontSendNotification);
+    pitchSourceLabel.attachToComponent(&pitchSourceSelector, true);
+    pitchSourceLabel.setJustificationType(juce::Justification::centred);
+
     startTimerHz(30); // Update the frequency display 30 times per second
 
-    setSize (1024, 600);
+    setSize (1280, 800);
 }
 
 LorenzAudioProcessorEditor::~LorenzAudioProcessorEditor()
@@ -160,17 +175,23 @@ void LorenzAudioProcessorEditor::resized()
     targetFrequencyKnob.setBounds(freqControlBounds.getX(), betaKnob.getY(), knobSize, knobSize);
     kpKnob.setBounds(freqControlBounds.getX(), targetFrequencyKnob.getBottom(), knobSize / 2, knobSize / 2);
     kiKnob.setBounds(freqControlBounds.getX() + knobSize / 2, targetFrequencyKnob.getBottom(), knobSize / 2, knobSize / 2);
-    kdKnob.setBounds(freqControlBounds.getX(), kpKnob.getBottom(), knobSize, knobSize);
+    kdKnob.setBounds(freqControlBounds.getX(), kpKnob.getBottom(), knobSize, knobSize / 2);
+    pitchSourceSelector.setBounds(freqControlBounds.getX(), kdKnob.getBottom() + 10, knobSize, 24);
 
 
     // Mixer Columns
-    levelXKnob.setBounds(leftSide.removeFromLeft(knobSpacing).removeFromTop(knobSize));
-    panXKnob.setBounds(leftSide.getX() - knobSpacing, knobSize, knobSize, knobSize);
-    levelYKnob.setBounds(leftSide.removeFromLeft(knobSpacing).removeFromTop(knobSize));
-    panYKnob.setBounds(leftSide.getX() - knobSpacing, knobSize, knobSize, knobSize);
-    levelZKnob.setBounds(leftSide.removeFromLeft(knobSpacing).removeFromTop(knobSize));
-    panZKnob.setBounds(leftSide.getX() - knobSpacing, knobSize, knobSize, knobSize);
-    
+    auto mixerXBounds = leftSide.removeFromLeft(knobSpacing);
+    levelXKnob.setBounds(mixerXBounds.removeFromTop(knobSize));
+    panXKnob.setBounds(mixerXBounds.removeFromTop(knobSize));
+
+    auto mixerYBounds = leftSide.removeFromLeft(knobSpacing);
+    levelYKnob.setBounds(mixerYBounds.removeFromTop(knobSize));
+    panYKnob.setBounds(mixerYBounds.removeFromTop(knobSize));
+
+    auto mixerZBounds = leftSide.removeFromLeft(knobSpacing);
+    levelZKnob.setBounds(mixerZBounds.removeFromTop(knobSize));
+    panZKnob.setBounds(mixerZBounds.removeFromTop(knobSize));
+
     leftSide.removeFromLeft(groupSpacing);
 
     // Output Column
@@ -186,4 +207,7 @@ void LorenzAudioProcessorEditor::resized()
     cxKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
     cyKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
     czKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
+
+    bottomArea.removeFromLeft(groupSpacing);
+    tamingKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
 }

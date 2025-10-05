@@ -81,7 +81,7 @@ public:
         return false;
     }
 
-    float getPitch();
+    float getPitch() const;
 
 private:
     void pushPointToFifo(const Point& p)
@@ -132,6 +132,7 @@ private:
     std::atomic<float>* kpParam = nullptr;
     std::atomic<float>* kiParam = nullptr;
     std::atomic<float>* kdParam = nullptr;
+    std::atomic<float>* pitchSourceParam = nullptr;
 
     std::atomic<float>* mxParam = nullptr;
     std::atomic<float>* myParam = nullptr;
@@ -139,6 +140,7 @@ private:
     std::atomic<float>* cxParam = nullptr;
     std::atomic<float>* cyParam = nullptr;
     std::atomic<float>* czParam = nullptr;
+    std::atomic<float>* tamingParam = nullptr;
 
     // --- Frequency Detection & Control ---
     adamski::PitchMPM pitchDetector;

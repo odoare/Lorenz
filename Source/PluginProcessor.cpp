@@ -39,6 +39,7 @@ LorenzAudioProcessor::LorenzAudioProcessor()
       kpParam(apvts.getRawParameterValue("KP")),
       kiParam(apvts.getRawParameterValue("KI")),
       kdParam(apvts.getRawParameterValue("KD")),
+      pitchSourceParam(apvts.getRawParameterValue("PITCH_SOURCE")),
       pitchDetector(44100.0, PITCHBUFFERSIZE), // Initialize with a default sample rate
       mxParam(apvts.getRawParameterValue("MX")), //
       myParam(apvts.getRawParameterValue("MY")),
@@ -46,7 +47,8 @@ LorenzAudioProcessor::LorenzAudioProcessor()
       cxParam(apvts.getRawParameterValue("CX")),
       cyParam(apvts.getRawParameterValue("CY")),
       czParam(apvts.getRawParameterValue("CZ"))
-#endif // JucePlugin_PreferredChannelConfigurations
+      , tamingParam(apvts.getRawParameterValue("TAMING"))
+#endif
 {
     dtTarget = timestepParam->load();
 }
@@ -124,7 +126,7 @@ void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     lorenzOsc.prepareToPlay(sampleRate);
 
     // Pass the parameter pointers to the oscillator.
-    lorenzOsc.setParameters(sigmaParam, rhoParam, betaParam, mxParam, myParam, mzParam, cxParam, cyParam, czParam);
+    lorenzOsc.setParameters(sigmaParam, rhoParam, betaParam, mxParam, myParam, mzParam, cxParam, cyParam, czParam, tamingParam);
     lorenzOsc.setTimestep(timestepParam);
 
     // Calculate how many audio samples to wait before generating the next point for the GUI
@@ -184,6 +186,10 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     // This is here to avoid people getting screaming feedback
     // when they first compile a plugin.
     // As our oscillator is generating the signal, we can clear the buffer first.
+    buffer.clear();
+
+    // Create a temporary buffer to hold the signal for pitch analysis for the current block.
+    juce::AudioBuffer<float> pitchAnalysisBlock(1, buffer.getNumSamples());
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
@@ -208,11 +214,13 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     }
 
     // Load parameter values.
-    const float levelX = juce::Decibels::decibelsToGain(levelXParam->load());
+    // The level parameters were not being loaded from the APVTS correctly.
+    // Let's load them now.
+    const float levelX = juce::Decibels::decibelsToGain(apvts.getRawParameterValue("LEVEL_X")->load());
     const float panX = panXParam->load();
-    const float levelY = juce::Decibels::decibelsToGain(levelYParam->load());
+    const float levelY = juce::Decibels::decibelsToGain(apvts.getRawParameterValue("LEVEL_Y")->load());
     const float panY = panYParam->load();
-    const float levelZ = juce::Decibels::decibelsToGain(levelZParam->load());
+    const float levelZ = juce::Decibels::decibelsToGain(apvts.getRawParameterValue("LEVEL_Z")->load());
     const float panZ = panZParam->load();
     const float outputLevel = juce::Decibels::decibelsToGain(outputLevelParam->load());
     const float targetFrequency = targetFrequencyParam->load();
@@ -225,6 +233,9 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
+        // We need a separate buffer for the pitch analysis signal
+        // to ensure it's pre-fader and pre-panner.
+        float pitchSourceSample = 0.0f;
         auto [x, y, z] = lorenzOsc.getNextSample();
 
         // Push points to the FIFO at a controlled rate, not on every sample.
@@ -233,6 +244,21 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
             pushPointToFifo({(float)x, (float)y, (float)z});
             samplesUntilNextPoint = pointGenerationInterval;
         }
+
+        // --- Pitch Source Selection ---
+        // Select the signal for pitch detection *before* level and pan are applied.
+        const int pitchSourceIndex = static_cast<int>(pitchSourceParam->load());
+        switch (pitchSourceIndex)
+        {
+            case 0: pitchSourceSample = static_cast<float>(x) * xScale; break;
+            case 1: pitchSourceSample = static_cast<float>(y) * yScale; break;
+            case 2: pitchSourceSample = static_cast<float>(z) * zScale; break;
+            default: pitchSourceSample = static_cast<float>(x) * xScale; break;
+        }
+
+        // Fill the analysis buffer for this sample.
+        // We write to our temporary block-sized buffer first.
+        pitchAnalysisBlock.setSample(0, sample, pitchSourceSample);
 
         // Scale and apply gain to each component
         const float xSample = static_cast<float>(x) * xScale * levelX;
@@ -255,10 +281,11 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     }
     
     // --- Frequency Detection & Control ---
-    // First, shift the existing data in the analysis buffer to the left
-    analysisBuffer.copyFrom (0, 0, analysisBuffer, 0, buffer.getNumSamples(), analysisBuffer.getNumSamples() - buffer.getNumSamples());
-    // Then, copy the new block of audio into the end of the analysis buffer
-    analysisBuffer.copyFrom (0, analysisBuffer.getNumSamples() - buffer.getNumSamples(), buffer, 0, 0, buffer.getNumSamples());
+    // First, shift the existing data in the main analysis buffer to the left
+    const int numSamplesToCopy = buffer.getNumSamples();
+    analysisBuffer.copyFrom(0, 0, analysisBuffer, 0, numSamplesToCopy, analysisBuffer.getNumSamples() - numSamplesToCopy);
+    // Then, copy the new block of audio from our temporary buffer into the end of the main analysis buffer
+    analysisBuffer.copyFrom(0, analysisBuffer.getNumSamples() - numSamplesToCopy, pitchAnalysisBlock, 0, 0, numSamplesToCopy);
 
     // Perform frequency detection on the block
     float freq = pitchDetector.getPitch(analysisBuffer.getReadPointer(0));
@@ -358,7 +385,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
                                                            8.0f / 3.0f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("TIMESTEP", "Timestep",
-                                                           juce::NormalisableRange<float>(0.0001f, 0.02f, 0.000001f, 0.5f), // Max value capped at 0.02 for stability
+                                                           juce::NormalisableRange<float>(0.0001f, 0.05f, 0.000001f, 0.5f), // Max value capped at 0.02 for stability
                                                            0.01f));
     
     // --- Frequency Control ---
@@ -379,20 +406,24 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
                                                            juce::NormalisableRange<float>(0.0f, 1e-4f, 0.0f, 0.25f),
                                                            0.0000007f));
 
+    layout.add(std::make_unique<juce::AudioParameterChoice>("PITCH_SOURCE", "Pitch Source",
+                                                           juce::StringArray { "X", "Y", "Z" },
+                                                           0)); // Default to X
+
 
     // --- Mixer Parameters ---
     layout.add(std::make_unique<juce::AudioParameterFloat>("LEVEL_X", "Level X",
-                                                           juce::NormalisableRange<float>(-60.0f, 0.0f, 0.1f), -6.0f));
+                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), 0.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("PAN_X", "Pan X",
                                                            juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), -0.5f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("LEVEL_Y", "Level Y",
-                                                           juce::NormalisableRange<float>(-60.0f, 0.0f, 0.1f), -6.0f));
+                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), -60.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("PAN_Y", "Pan Y",
                                                            juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 0.5f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("LEVEL_Z", "Level Z",
-                                                           juce::NormalisableRange<float>(-60.0f, 0.0f, 0.1f), -6.0f));
+                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), -60.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("PAN_Z", "Pan Z",
                                                            juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 0.0f));
 
@@ -411,11 +442,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
 
     // --- Second Order Parameters ---
     layout.add(std::make_unique<juce::AudioParameterFloat>("MX", "Mass X",
-                                                           juce::NormalisableRange<float>(0.01f, 2.0f, 0.01f, 0.5f), 0.01f));
+                                                           juce::NormalisableRange<float>(0.001f, 0.02f, 0.001f, 0.5f), 0.005f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("MY", "Mass Y",
-                                                           juce::NormalisableRange<float>(0.01f, 2.0f, 0.01f, 0.5f), 0.01f));
+                                                           juce::NormalisableRange<float>(0.001f, 0.02f, 0.001f, 0.5f), 0.005f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("MZ", "Mass Z",
-                                                           juce::NormalisableRange<float>(0.01f, 2.0f, 0.01f, 0.5f), 0.01f));
+                                                           juce::NormalisableRange<float>(0.001f, 0.02f, 0.001f, 0.5f), 0.005f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("CX", "Damping X",
                                                            juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f, 0.5f), 1.0f));
@@ -423,6 +454,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
                                                            juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f, 0.5f), 1.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("CZ", "Damping Z",
                                                            juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f, 0.5f), 1.0f));
+
+    // --- Taming Parameter ---
+    layout.add(std::make_unique<juce::AudioParameterFloat>("TAMING", "Taming",
+                                                           juce::NormalisableRange<float>(0.0f, 0.1f, 0.0f, 0.25f),
+                                                           0.0f));
 
 
     return layout;

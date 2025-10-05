@@ -27,8 +27,9 @@ public:
 
     void reset();
     void setParameters(const std::atomic<float>* newSigma, const std::atomic<float>* newRho, const std::atomic<float>* newBeta,
-                       const std::atomic<float>* newMx, const std::atomic<float>* newMy, const std::atomic<float>* newMz,
-                       const std::atomic<float>* newCx, const std::atomic<float>* newCy, const std::atomic<float>* newCz);
+                       const std::atomic<float>* newMx, const std::atomic<float>* newMy, const std::atomic<float>* newMz, //
+                       const std::atomic<float>* newCx, const std::atomic<float>* newCy, const std::atomic<float>* newCz, //
+                       const std::atomic<float>* newTaming);
     void setTimestep(const std::atomic<float>* newDt);
     void setRampLength(double rampLengthSeconds);
 
@@ -43,6 +44,9 @@ private:
     juce::SmoothedValue<float> mx, my, mz;
     juce::SmoothedValue<float> cx, cy, cz;
 
+    // Taming parameter
+    juce::SmoothedValue<float> taming;
+
     // Timestep for numerical integration
     juce::SmoothedValue<float> dt;
 
@@ -51,6 +55,7 @@ private:
     const std::atomic<float>* mxParam { nullptr }, *myParam { nullptr }, *mzParam { nullptr };
     const std::atomic<float>* cxParam { nullptr }, *cyParam { nullptr }, *czParam { nullptr };
     const std::atomic<float>* dtParam { nullptr };
+    const std::atomic<float>* tamingParam { nullptr };
 
     // Sample rate
     double sampleRate;
