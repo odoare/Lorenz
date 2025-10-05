@@ -26,30 +26,23 @@ public:
     std::tuple<double, double, double> getNextSample();
 
     void reset();
-    void setParameters(const std::atomic<float>* newSigma, const std::atomic<float>* newRho, const std::atomic<float>* newBeta,
-                       const std::atomic<float>* newMx, const std::atomic<float>* newMy, const std::atomic<float>* newMz,
-                       const std::atomic<float>* newCx, const std::atomic<float>* newCy, const std::atomic<float>* newCz);
+    void setParameters(const std::atomic<float>* newAlpha, const std::atomic<float>* newBeta, const std::atomic<float>* newGamma,
+                       const std::atomic<float>* newDelta, const std::atomic<float>* newFrequency);
     void setTimestep(const std::atomic<float>* newDt);
     void setRampLength(double rampLengthSeconds);
 
 private:
-    // Lorenz system state
-    double x, y, z, vx, vy, vz;
+    // Duffing system state
+    double x, v, t;
 
-    // Lorenz system parameters
-    juce::SmoothedValue<float> sigma, rho, beta;
-
-    // Second order parameters
-    juce::SmoothedValue<float> mx, my, mz;
-    juce::SmoothedValue<float> cx, cy, cz;
+    // Duffing system parameters
+    juce::SmoothedValue<float> alpha, beta, gamma, delta, frequency;
 
     // Timestep for numerical integration
     juce::SmoothedValue<float> dt;
 
     // Raw pointers to APVTS parameters
-    const std::atomic<float>* sigmaParam { nullptr }, *rhoParam { nullptr }, *betaParam { nullptr };
-    const std::atomic<float>* mxParam { nullptr }, *myParam { nullptr }, *mzParam { nullptr };
-    const std::atomic<float>* cxParam { nullptr }, *cyParam { nullptr }, *czParam { nullptr };
+    const std::atomic<float>* alphaParam { nullptr }, *betaDuffingParam { nullptr }, *gammaParam { nullptr }, *deltaParam { nullptr }, *frequencyParam { nullptr };
     const std::atomic<float>* dtParam { nullptr };
 
     // Sample rate

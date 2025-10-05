@@ -110,53 +110,16 @@ private:
     int pointGenerationInterval = 0;
     static constexpr int pointsPerSecond = 8000;
 
-    // Cached parameter pointers
-    std::atomic<float>* sigmaParam = nullptr;
-    std::atomic<float>* rhoParam = nullptr;
-    std::atomic<float>* betaParam = nullptr;
+    // Duffing parameter pointers
+    std::atomic<float>* alphaParam = nullptr;
+    std::atomic<float>* betaDuffingParam = nullptr;
+    std::atomic<float>* gammaParam = nullptr;
+    std::atomic<float>* deltaParam = nullptr;
+    std::atomic<float>* frequencyParam = nullptr;
     juce::RangedAudioParameter* timestepRangedParam = nullptr;
     std::atomic<float>* timestepParam = nullptr;
-    
-    std::atomic<float>* levelXParam = nullptr;
-    std::atomic<float>* panXParam = nullptr;
-    std::atomic<float>* levelYParam = nullptr;
-    std::atomic<float>* panYParam = nullptr;
-    std::atomic<float>* levelZParam = nullptr;
-    std::atomic<float>* panZParam = nullptr;
     std::atomic<float>* outputLevelParam = nullptr;
     std::atomic<float>* viewZoomXParam = nullptr;
     std::atomic<float>* viewZoomZParam = nullptr;
-
-    // Frequency control
-    std::atomic<float>* targetFrequencyParam = nullptr;
-    std::atomic<float>* kpParam = nullptr;
-    std::atomic<float>* kiParam = nullptr;
-    std::atomic<float>* kdParam = nullptr;
-
-    std::atomic<float>* mxParam = nullptr;
-    std::atomic<float>* myParam = nullptr;
-    std::atomic<float>* mzParam = nullptr;
-    std::atomic<float>* cxParam = nullptr;
-    std::atomic<float>* cyParam = nullptr;
-    std::atomic<float>* czParam = nullptr;
-
-    // --- Frequency Detection & Control ---
-    adamski::PitchMPM pitchDetector;
-    std::atomic<float> measuredFrequency { 0.0f };
-
-    int nPitchBuffers, pitchBufferSize, bufferSize;
-    float sampleRate;
-
-    // PI Controller for dt
-    float dtIntegral = 0.0f;
-    float dtProportional = 0.0f;
-    float dtDerivative = 0.0f;
-    float dtTarget = 0.001f; // The value we are driving dt towards
-    float lastError = 0.0f;
-
-    // Buffer for frequency analysis
-    juce::AudioBuffer<float> analysisBuffer;
-
-    //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LorenzAudioProcessor)
 };

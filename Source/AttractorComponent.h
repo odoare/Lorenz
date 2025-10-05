@@ -76,12 +76,12 @@ private:
 
         // For now, we'll keep the view centered.
         const float centerX = 0.0f;
-        const float centerZ = 25.0f;
+        const float centerY = 0.0f; // Center for velocity (v)
 
         const float lorenzXMin = centerX - viewWidth / 2.0f;
         const float lorenzXMax = centerX + viewWidth / 2.0f;
-        const float lorenzZMin = centerZ - viewHeight / 2.0f;
-        const float lorenzZMax = centerZ + viewHeight / 2.0f;
+        const float lorenzYMin = centerY - viewHeight / 2.0f;
+        const float lorenzYMax = centerY + viewHeight / 2.0f;
 
         for (int i = 0; i < maxPointsPerTimerCall; ++i)
         {
@@ -91,11 +91,11 @@ private:
                 // Map Lorenz X coordinate to component's X-axis.
                 const float screenX = juce::jmap (p.x, lorenzXMin, lorenzXMax, bounds.getX(), bounds.getRight());
                 
-                // Map Lorenz Z coordinate to component's Y-axis.
-                // We map the Lorenz Z range to the full height, and invert the Y-axis so higher Z is higher on screen.
-                const float screenZ = juce::jmap (p.z, lorenzZMin, lorenzZMax, bounds.getBottom(), bounds.getY());
+                // Map Duffing velocity (p.y) to component's Y-axis.
+                // We invert the Y-axis so higher velocity is higher on screen.
+                const float screenY = juce::jmap (p.y, lorenzYMin, lorenzYMax, bounds.getBottom(), bounds.getY());
                 
-                points.push_back({screenX, screenZ});
+                points.push_back({screenX, screenY});
             }
             else
             {
