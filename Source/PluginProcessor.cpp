@@ -35,6 +35,7 @@ LorenzAudioProcessor::LorenzAudioProcessor()
       outputLevelParam(apvts.getRawParameterValue("OUTPUT_LEVEL")),
       viewZoomXParam(apvts.getRawParameterValue("VIEW_ZOOM_X")),
       viewZoomZParam(apvts.getRawParameterValue("VIEW_ZOOM_Z")),
+      viewZoomYParam(apvts.getRawParameterValue("VIEW_ZOOM_Y")),
       targetFrequencyParam(apvts.getRawParameterValue("TARGET_FREQ")),
       kpParam(apvts.getRawParameterValue("KP")),
       kiParam(apvts.getRawParameterValue("KI")),
@@ -437,6 +438,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
                                                            50.0f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("VIEW_ZOOM_Z", "View Zoom Z",
+                                                           juce::NormalisableRange<float>(10.0f, 100.0f, 0.1f, 0.5f),
+                                                           50.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>("VIEW_ZOOM_Y", "View Zoom Y",
                                                            juce::NormalisableRange<float>(10.0f, 100.0f, 0.1f, 0.5f),
                                                            50.0f));
 

@@ -126,6 +126,7 @@ private:
     std::atomic<float>* outputLevelParam = nullptr;
     std::atomic<float>* viewZoomXParam = nullptr;
     std::atomic<float>* viewZoomZParam = nullptr;
+    std::atomic<float>* viewZoomYParam = nullptr;
 
     // Frequency control
     std::atomic<float>* targetFrequencyParam = nullptr;

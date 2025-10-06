@@ -76,10 +76,10 @@ private:
 
     AttractorComponent attractorComponent{audioProcessor};
 
-    juce::Slider viewZoomXSlider, viewZoomZSlider;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> viewZoomXAttachment, viewZoomZAttachment;
+    juce::Slider viewZoomXSlider, viewZoomZSlider, viewZoomYSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> viewZoomXAttachment, viewZoomZAttachment, viewZoomYAttachment;
 
-    juce::Label viewZoomXLabel, viewZoomZLabel;
+    juce::Label viewZoomXLabel, viewZoomZLabel, viewZoomYLabel;
     juce::Label measuredFrequencyLabel;
 
     juce::ComboBox pitchSourceSelector;

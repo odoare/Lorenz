@@ -91,6 +91,16 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     viewZoomZLabel.attachToComponent(&viewZoomZSlider, true);
     viewZoomZLabel.setJustificationType(juce::Justification::centredRight);
 
+    addAndMakeVisible(viewZoomYSlider);
+    viewZoomYSlider.setSliderStyle(juce::Slider::LinearVertical);
+    viewZoomYSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    viewZoomYAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "VIEW_ZOOM_Y", viewZoomYSlider);
+
+    addAndMakeVisible(viewZoomYLabel);
+    viewZoomYLabel.setText("Y Zoom", juce::dontSendNotification);
+    viewZoomYLabel.attachToComponent(&viewZoomYSlider, true);
+    viewZoomYLabel.setJustificationType(juce::Justification::centredRight);
+
     addAndMakeVisible(resetButton);
     resetButton.onClick = [this]
     {
@@ -162,6 +172,7 @@ void LorenzAudioProcessorEditor::resized()
     auto attractorViewBounds = rightSide.reduced(10);
 
     viewZoomZSlider.setBounds(attractorViewBounds.removeFromRight(20));
+    viewZoomYSlider.setBounds(attractorViewBounds.removeFromRight(20));
     viewZoomXSlider.setBounds(attractorViewBounds.removeFromBottom(20));
 
     attractorComponent.setBounds(attractorViewBounds);
