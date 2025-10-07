@@ -69,18 +69,18 @@ void LorenzOsc::setTimestep(const std::atomic<float>* newDt)
 
 void LorenzOsc::setRampLength(double rampLengthSeconds)
 {
-    this->rampDurationSeconds = rampLengthSeconds;
-    sigma.reset(sampleRate, this->rampDurationSeconds);
-    rho.reset(sampleRate, this->rampDurationSeconds);
-    beta.reset(sampleRate, this->rampDurationSeconds);
-    mx.reset(sampleRate, this->rampDurationSeconds);
-    my.reset(sampleRate, this->rampDurationSeconds);
-    mz.reset(sampleRate, this->rampDurationSeconds);
-    cx.reset(sampleRate, this->rampDurationSeconds);
-    cy.reset(sampleRate, this->rampDurationSeconds);
-    cz.reset(sampleRate, this->rampDurationSeconds);
-    taming.reset(sampleRate, this->rampDurationSeconds);
-    dt.reset(sampleRate, this->rampDurationSeconds);
+    this->rampDurationSeconds = rampLengthSeconds; // 'this->' is good practice here to prevent shadowing
+    sigma.reset(sampleRate, rampDurationSeconds);
+    rho.reset(sampleRate, rampDurationSeconds);
+    beta.reset(sampleRate, rampDurationSeconds);
+    mx.reset(sampleRate, rampDurationSeconds);
+    my.reset(sampleRate, rampDurationSeconds);
+    mz.reset(sampleRate, rampDurationSeconds);
+    cx.reset(sampleRate, rampDurationSeconds);
+    cy.reset(sampleRate, rampDurationSeconds);
+    cz.reset(sampleRate, rampDurationSeconds);
+    taming.reset(sampleRate, rampDurationSeconds);
+    dt.reset(sampleRate, rampDurationSeconds);
 }
 
 std::tuple<double, double, double> LorenzOsc::getNextSample()
@@ -98,46 +98,47 @@ std::tuple<double, double, double> LorenzOsc::getNextSample()
     taming.setTargetValue(tamingParam->load());
     dt.setTargetValue(dtParam->load());
     
-    const float totalDt = dt.getNextValue();
+    // Get the smoothed parameter values once, before the simulation loop.
+    const float currentSigma  = sigma.getNextValue();
+    const float currentRho    = rho.getNextValue();
+    const float currentBeta   = beta.getNextValue();
+    const float currentMx     = mx.getNextValue();
+    const float currentMy     = my.getNextValue();
+    const float currentMz     = mz.getNextValue();
+    const float currentCx     = cx.getNextValue();
+    const float currentCy     = cy.getNextValue();
+    const float currentCz     = cz.getNextValue();
+    const float currentTaming = taming.getNextValue();
+    const float totalDt       = dt.getNextValue();
+
     constexpr float maxSimulationTimestep = 0.005f;
 
     // Determine the number of sub-steps needed to keep the simulation stable.
     const int numSubSteps = std::max(1, static_cast<int>(std::ceil(totalDt / maxSimulationTimestep)));
     const float simulationTimestep = totalDt / numSubSteps;
 
+    // Helper lambda to compute derivatives at a given state.
+    // It now captures the pre-calculated smoothed parameter values.
+    auto derivatives = [&](double tX, double tY, double tZ, double tVx, double tVy, double tVz) -> std::tuple<double, double, double, double, double, double>
+    {
+        const double dxdt = tVx;
+        const double dydt = tVy;
+        const double dzdt = tVz;
+
+        // Add the non-linear damping term: -taming * v^3. This opposes the velocity.
+        const double tamingForceX = currentTaming * tVx * tVx * tVx;
+        const double tamingForceY = currentTaming * tVy * tVy * tVy;
+        const double tamingForceZ = currentTaming * tVz * tVz * tVz;
+
+        const double dvxdt = (currentSigma * (tY - tX) - currentCx * tVx - tamingForceX) / currentMx;
+        const double dvydt = (tX * (currentRho - tZ) - tY - currentCy * tVy - tamingForceY) / currentMy;
+        const double dvzdt = (tX * tY - currentBeta * tZ - currentCz * tVz - tamingForceZ) / currentMz;
+        return { dxdt, dydt, dzdt, dvxdt, dvydt, dvzdt };
+    };
+
     for (int i = 0; i < numSubSteps; ++i)
     {
         // --- Fourth-Order Runge-Kutta (RK4) Integration for one sub-step ---
-
-        // Helper lambda to compute derivatives at a given state
-        auto derivatives = [&](double tX, double tY, double tZ, double tVx, double tVy, double tVz) -> std::tuple<double, double, double, double, double, double>
-        {
-            const double dxdt = tVx;
-            const double dydt = tVy;
-            const double dzdt = tVz;
-
-            // Get the next smoothed value for this sub-step
-            const float currentSigma = sigma.getNextValue();
-            const float currentRho = rho.getNextValue();
-            const float currentBeta = beta.getNextValue();
-            const float currentMx = mx.getNextValue();
-            const float currentMy = my.getNextValue();
-            const float currentMz = mz.getNextValue();
-            const float currentCx = cx.getNextValue();
-            const float currentCy = cy.getNextValue();
-            const float currentCz = cz.getNextValue();
-            const float currentTaming = taming.getNextValue();
-
-            // Add the non-linear damping term: -taming * v^3. This opposes the velocity.
-            const double tamingForceX = currentTaming * tVx * tVx * tVx;
-            const double tamingForceY = currentTaming * tVy * tVy * tVy;
-            const double tamingForceZ = currentTaming * tVz * tVz * tVz;
-
-            const double dvxdt = (currentSigma * (tY - tX) - currentCx * tVx - tamingForceX) / currentMx;
-            const double dvydt = (tX * (currentRho - tZ) - tY - currentCy * tVy - tamingForceY) / currentMy;
-            const double dvzdt = (tX * tY - currentBeta * tZ - currentCz * tVz - tamingForceZ) / currentMz;
-            return { dxdt, dydt, dzdt, dvxdt, dvydt, dvzdt };
-        };
 
         // k1: Evaluate derivatives at the current state
         auto [k1_x, k1_y, k1_z, k1_vx, k1_vy, k1_vz] = derivatives(x, y, z, vx, vy, vz);
