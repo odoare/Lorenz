@@ -160,6 +160,12 @@ private:
     // Buffer for frequency analysis
     juce::AudioBuffer<float> analysisBuffer;
 
+    void highPassFilter(juce::AudioBuffer<float>& buffer, float cutoffFreq);
+    // State for the high-pass filter
+    juce::Array<float> hpf_prevInput;
+    juce::Array<float> hpf_prevOutput;
+    double processSampleRate = 44100.0;
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LorenzAudioProcessor)
 };

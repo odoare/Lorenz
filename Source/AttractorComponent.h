@@ -61,9 +61,9 @@ public:
 
         // These scaling factors must match the ones in PluginProcessor.cpp
         // to correctly represent the [-1, 1] audio signal range.
-        const float xScale = 0.05f;
-        const float yScale = 0.05f;
-        const float zScale = 0.025f;
+        const float xScale = 0.025f;
+        const float yScale = 0.025f;
+        const float zScale = 0.0125f;
 
         // Calculate the raw coordinate values that correspond to an audio signal of +/- 1.0
         const float xTickValue = 1.0f / xScale; // e.g., 1.0 / 0.05 = 20.0
@@ -77,19 +77,19 @@ public:
         g.drawVerticalLine(juce::roundToInt(screenX_neg1), bounds.getY(), bounds.getBottom()); // -1 tick
         g.drawVerticalLine(juce::roundToInt(screenX_pos1), bounds.getY(), bounds.getBottom()); // +1 tick
 
-        // Y-axis ticks for X-Y plot (horizontal lines)
+        // Z-axis ticks for X-Z plot (horizontal lines, white)
         g.setColour(juce::Colours::white.withAlpha(0.5f));
-        float screenY_neg1 = juce::jmap(-yTickValue, lorenzYMin, lorenzYMax, bounds.getBottom(), bounds.getY());
-        float screenY_pos1 = juce::jmap( yTickValue, lorenzYMin, lorenzYMax, bounds.getBottom(), bounds.getY());
-        g.drawHorizontalLine(juce::roundToInt(screenY_neg1), bounds.getX(), bounds.getRight()); // -1 tick
-        g.drawHorizontalLine(juce::roundToInt(screenY_pos1), bounds.getX(), bounds.getRight()); // +1 tick
-
-        // Z-axis ticks for X-Z plot (horizontal lines)
-        g.setColour(juce::Colours::cyan.withAlpha(0.5f));
         float screenZ_neg1 = juce::jmap(centerZ - zTickValue, lorenzZMin, lorenzZMax, bounds.getBottom(), bounds.getY());
         float screenZ_pos1 = juce::jmap(centerZ + zTickValue, lorenzZMin, lorenzZMax, bounds.getBottom(), bounds.getY());
         g.drawHorizontalLine(juce::roundToInt(screenZ_neg1), bounds.getX(), bounds.getRight()); // -1 tick
         g.drawHorizontalLine(juce::roundToInt(screenZ_pos1), bounds.getX(), bounds.getRight()); // +1 tick
+
+        // Y-axis ticks for X-Y plot (horizontal lines)
+        g.setColour(juce::Colours::cyan.withAlpha(0.5f));
+        float screenY_neg1 = juce::jmap(-yTickValue, lorenzYMin, lorenzYMax, bounds.getBottom(), bounds.getY());
+        float screenY_pos1 = juce::jmap( yTickValue, lorenzYMin, lorenzYMax, bounds.getBottom(), bounds.getY());
+        g.drawHorizontalLine(juce::roundToInt(screenY_neg1), bounds.getX(), bounds.getRight()); // -1 tick
+        g.drawHorizontalLine(juce::roundToInt(screenY_pos1), bounds.getX(), bounds.getRight()); // +1 tick
 
         // --- Draw Attractor Paths ---
 

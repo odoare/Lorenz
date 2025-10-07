@@ -38,9 +38,9 @@ private:
     fxme::FxmeLookAndFeel fxmeLookAndFeel;
 
     // Attractor Knobs
-    fxme::FxmeKnob sigmaKnob{audioProcessor.apvts, "SIGMA", juce::Colours::red},
-                    rhoKnob{audioProcessor.apvts, "RHO", juce::Colours::green},
-                    betaKnob{audioProcessor.apvts, "BETA", juce::Colours::blue},
+    fxme::FxmeKnob sigmaKnob{audioProcessor.apvts, "SIGMA", juce::Colours::cyan},
+                    rhoKnob{audioProcessor.apvts, "RHO", juce::Colours::cyan},
+                    betaKnob{audioProcessor.apvts, "BETA", juce::Colours::cyan},
                     timestepKnob{audioProcessor.apvts, "TIMESTEP", juce::Colours::yellow};
     // Frequency Control
     fxme::FxmeKnob targetFrequencyKnob{audioProcessor.apvts, "TARGET_FREQ", juce::Colours::orange};
@@ -49,16 +49,16 @@ private:
     fxme::FxmeKnob kdKnob{audioProcessor.apvts, "KD", juce::Colours::lightgreen};
     // X Mixer Knobs
     fxme::FxmeKnob levelXKnob{audioProcessor.apvts, "LEVEL_X", juce::Colours::red},
-                    panXKnob{audioProcessor.apvts, "PAN_X", juce::Colours::blue};
+                    panXKnob{audioProcessor.apvts, "PAN_X", juce::Colours::red};
 
 
     // Y Mixer Knobs
     fxme::FxmeKnob levelYKnob{audioProcessor.apvts, "LEVEL_Y", juce::Colours::green},
-                    panYKnob{audioProcessor.apvts, "PAN_Y", juce::Colours::yellow};
+                    panYKnob{audioProcessor.apvts, "PAN_Y", juce::Colours::green};
 
     // Z Mixer Knobs
     fxme::FxmeKnob levelZKnob{audioProcessor.apvts, "LEVEL_Z", juce::Colours::blue},
-                    panZKnob{audioProcessor.apvts, "PAN_Z", juce::Colours::red};
+                    panZKnob{audioProcessor.apvts, "PAN_Z", juce::Colours::blue};
 
     // Output Knob
     fxme::FxmeKnob outputLevelKnob{audioProcessor.apvts, "OUTPUT_LEVEL", juce::Colours::white};

@@ -77,9 +77,9 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     viewZoomXAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "VIEW_ZOOM_X", viewZoomXSlider);
 
     addAndMakeVisible(viewZoomXLabel);
-    viewZoomXLabel.setText("X Zoom", juce::dontSendNotification);
-    viewZoomXLabel.attachToComponent(&viewZoomXSlider, false);
-    viewZoomXLabel.setJustificationType(juce::Justification::centredTop);
+    viewZoomXLabel.setText("X", juce::dontSendNotification);
+    // viewZoomXLabel.attachToComponent(&viewZoomXSlider, false);
+    // viewZoomXLabel.setJustificationType(juce::Justification::centredTop);
 
     addAndMakeVisible(viewZoomZSlider);
     viewZoomZSlider.setSliderStyle(juce::Slider::LinearVertical);
@@ -87,9 +87,9 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     viewZoomZAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "VIEW_ZOOM_Z", viewZoomZSlider);
 
     addAndMakeVisible(viewZoomZLabel);
-    viewZoomZLabel.setText("Z Zoom", juce::dontSendNotification);
-    viewZoomZLabel.attachToComponent(&viewZoomZSlider, true);
-    viewZoomZLabel.setJustificationType(juce::Justification::centredRight);
+    viewZoomZLabel.setText("Z", juce::dontSendNotification);
+    // viewZoomZLabel.attachToComponent(&viewZoomZSlider, true);
+    // viewZoomZLabel.setJustificationType(juce::Justification::centredRight);
 
     addAndMakeVisible(viewZoomYSlider);
     viewZoomYSlider.setSliderStyle(juce::Slider::LinearVertical);
@@ -97,9 +97,9 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     viewZoomYAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "VIEW_ZOOM_Y", viewZoomYSlider);
 
     addAndMakeVisible(viewZoomYLabel);
-    viewZoomYLabel.setText("Y Zoom", juce::dontSendNotification);
-    viewZoomYLabel.attachToComponent(&viewZoomYSlider, true);
-    viewZoomYLabel.setJustificationType(juce::Justification::centredRight);
+    viewZoomYLabel.setText("Y", juce::dontSendNotification);
+    // viewZoomYLabel.attachToComponent(&viewZoomYSlider, true);
+    // viewZoomYLabel.setJustificationType(juce::Justification::centredRight);
 
     addAndMakeVisible(resetButton);
     resetButton.onClick = [this]
@@ -121,12 +121,12 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
 
     addAndMakeVisible(pitchSourceLabel);
     pitchSourceLabel.setText("Pitch Source", juce::dontSendNotification);
-    pitchSourceLabel.attachToComponent(&pitchSourceSelector, true);
+    //pitchSourceLabel.attachToComponent(&pitchSourceSelector, true);
     pitchSourceLabel.setJustificationType(juce::Justification::centred);
 
     startTimerHz(30); // Update the frequency display 30 times per second
 
-    setSize (1280, 800);
+    setSize (800, 600);
 }
 
 LorenzAudioProcessorEditor::~LorenzAudioProcessorEditor()
@@ -145,80 +145,95 @@ void LorenzAudioProcessorEditor::timerCallback()
 void LorenzAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    auto diagonale = (getLocalBounds().getTopLeft() - getLocalBounds().getBottomRight()).toFloat();
+    auto length = diagonale.getDistanceFromOrigin();
+    auto perpendicular = diagonale.rotatedAboutOrigin (juce::degreesToRadians (270.0f)) / length;
+    auto height = float (getWidth() * getHeight()) / length;
+    auto bluegreengrey = juce::Colour::fromFloatRGBA (0.15f, 0.15f, 0.25f, 1.0f);
+    juce::ColourGradient grad (bluegreengrey.darker().darker().darker(), perpendicular * height,
+                           bluegreengrey, perpendicular * -height, false);
+    g.setGradientFill(grad);
+    g.fillAll();
 }
 
 void LorenzAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
+
+    using fi = juce::FlexItem;
+
+    juce::FlexBox fbLorenz, fbFreqControl, fbOutput, fbMiddle, fbGraphx, fbGraphy, fbGraphx2;
+    juce::FlexBox fbL1, fbL2, fbL3, fbL4, fbL5;
+    juce::FlexBox fbF1, fbF2, fbF11;
+    juce::FlexBox fbMain;
     
-    // Define a top area for the main controls and a bottom area for the new knobs
-    auto bottomArea = bounds.removeFromBottom(120);
-    auto topArea = bounds;
+    fbL1.flexDirection = juce::FlexBox::Direction::row;
+    fbL2.flexDirection = juce::FlexBox::Direction::row;
+    fbL3.flexDirection = juce::FlexBox::Direction::row;
+    fbL4.flexDirection = juce::FlexBox::Direction::row;
+    fbL5.flexDirection = juce::FlexBox::Direction::row;
+    fbF1.flexDirection = juce::FlexBox::Direction::row;
+    fbF11.flexDirection = juce::FlexBox::Direction::column;
+    fbF2.flexDirection = juce::FlexBox::Direction::row;
+    fbMain.flexDirection = juce::FlexBox::Direction::row;
 
-    const int knobSize = 80;
-    const int knobSpacing = 100;
-    const int groupSpacing = 30;
-
-    // Attractor Parameters Column
-    auto attractorBounds = topArea.removeFromLeft(knobSpacing);
-    sigmaKnob.setBounds(attractorBounds.removeFromTop(knobSize));
-    rhoKnob.setBounds(attractorBounds.removeFromTop(knobSize));
-    betaKnob.setBounds(attractorBounds.removeFromTop(knobSize));
-    timestepKnob.setBounds(attractorBounds.removeFromTop(knobSize).withY(betaKnob.getBottom()));
-    resetButton.setBounds(attractorBounds.getX(), timestepKnob.getBottom() + 10, attractorBounds.getWidth(), 24);
-
-    auto rightSide = topArea.removeFromRight(topArea.getWidth() / 2);
-    auto attractorViewBounds = rightSide.reduced(10);
-
-    viewZoomZSlider.setBounds(attractorViewBounds.removeFromRight(20));
-    viewZoomYSlider.setBounds(attractorViewBounds.removeFromRight(20));
-    viewZoomXSlider.setBounds(attractorViewBounds.removeFromBottom(20));
-
-    attractorComponent.setBounds(attractorViewBounds);
-
-    auto leftSide = topArea;
-    leftSide.removeFromLeft(groupSpacing);
-
-    // --- Frequency Control Column ---
-    auto freqControlBounds = leftSide.removeFromLeft(knobSpacing);
-    measuredFrequencyLabel.setBounds(freqControlBounds.getX(), betaKnob.getY() - 20, freqControlBounds.getWidth(), 20);
-    targetFrequencyKnob.setBounds(freqControlBounds.getX(), betaKnob.getY(), knobSize, knobSize);
-    kpKnob.setBounds(freqControlBounds.getX(), targetFrequencyKnob.getBottom(), knobSize / 2, knobSize / 2);
-    kiKnob.setBounds(freqControlBounds.getX() + knobSize / 2, targetFrequencyKnob.getBottom(), knobSize / 2, knobSize / 2);
-    kdKnob.setBounds(freqControlBounds.getX(), kpKnob.getBottom(), knobSize, knobSize / 2);
-    pitchSourceSelector.setBounds(freqControlBounds.getX(), kdKnob.getBottom() + 10, knobSize, 24);
+    fbGraphx.flexDirection = juce::FlexBox::Direction::row;
+    fbGraphy.flexDirection = juce::FlexBox::Direction::column;
+    fbGraphx2.flexDirection = juce::FlexBox::Direction::row;
 
 
-    // Mixer Columns
-    auto mixerXBounds = leftSide.removeFromLeft(knobSpacing);
-    levelXKnob.setBounds(mixerXBounds.removeFromTop(knobSize));
-    panXKnob.setBounds(mixerXBounds.removeFromTop(knobSize));
+    fbLorenz.flexDirection = juce::FlexBox::Direction::column;
+    fbFreqControl.flexDirection = juce::FlexBox::Direction::column;
+    fbOutput.flexDirection = juce::FlexBox::Direction::row;
+    fbMiddle.flexDirection = juce::FlexBox::Direction::column;
 
-    auto mixerYBounds = leftSide.removeFromLeft(knobSpacing);
-    levelYKnob.setBounds(mixerYBounds.removeFromTop(knobSize));
-    panYKnob.setBounds(mixerYBounds.removeFromTop(knobSize));
+    fbL1.items.add(fi(sigmaKnob).withFlex(1.f));
+    fbL1.items.add(fi(rhoKnob).withFlex(1.f));
+    fbL1.items.add(fi(betaKnob).withFlex(1.f));
+    fbL2.items.add(fi(mxKnob).withFlex(1.f));
+    fbL2.items.add(fi(myKnob).withFlex(1.f));
+    fbL2.items.add(fi(mzKnob).withFlex(1.f));
+    fbL3.items.add(fi(cxKnob).withFlex(1.f));
+    fbL3.items.add(fi(cyKnob).withFlex(1.f));
+    fbL3.items.add(fi(czKnob).withFlex(1.f));
+    fbL4.items.add(fi(levelXKnob).withFlex(1.f));
+    fbL4.items.add(fi(levelYKnob).withFlex(1.f));
+    fbL4.items.add(fi(levelZKnob).withFlex(1.f));
+    fbL5.items.add(fi(panXKnob).withFlex(1.f));
+    fbL5.items.add(fi(panYKnob).withFlex(1.f));
+    fbL5.items.add(fi(panZKnob).withFlex(1.f));
+    fbLorenz.items.add(fi(fbL1).withFlex(1.f));
+    fbLorenz.items.add(fi(fbL2).withFlex(1.f));
+    fbLorenz.items.add(fi(fbL3).withFlex(1.f));
+    fbLorenz.items.add(fi(fbL4).withFlex(1.f));
+    fbLorenz.items.add(fi(fbL5).withFlex(1.f));
+    fbF1.items.add(fi(targetFrequencyKnob).withFlex(1.f));
+    fbF1.items.add(fi(timestepKnob).withFlex(1.f));
+    fbF11.items.add(fi(pitchSourceLabel).withFlex(1.f));
+    fbF11.items.add(fi(pitchSourceSelector).withFlex(1.f).withMargin(10).withMargin(juce::FlexItem::Margin(0,20,10,20)));
+    fbF11.items.add(fi(measuredFrequencyLabel).withFlex(1.f));
+    fbF1.items.add(fi(fbF11).withFlex(1.f));
+    fbF1.items.add(fi(kpKnob).withFlex(1.f));
+    fbF1.items.add(fi(kiKnob).withFlex(1.f));
+    fbF1.items.add(fi(kdKnob).withFlex(1.f));
+    fbOutput.items.add(fi(outputLevelKnob).withFlex(1.f));
+    fbOutput.items.add(fi(tamingKnob).withFlex(1.f));
+    fbOutput.items.add(fi(resetButton).withFlex(1.f).withMargin(30));
+    fbGraphx.items.add(fi(attractorComponent).withFlex(1.f));
+    fbGraphx.items.add(fi(viewZoomZSlider).withFlex(.05f));
+    fbGraphx.items.add(fi(viewZoomYSlider).withFlex(.05f));
+    fbGraphx2.items.add(fi(viewZoomXLabel).withFlex(.05f));
+    fbGraphx2.items.add(fi(viewZoomXLabel).withFlex(.05f));
+    fbGraphx2.items.add(fi(viewZoomXSlider).withFlex(.95f));
+    fbGraphx2.items.add(fi(viewZoomYLabel).withFlex(.05f));
+    fbGraphx2.items.add(fi(viewZoomZLabel).withFlex(.05f));
+    fbGraphy.items.add(fi(fbGraphx).withFlex(1.f));
+    fbGraphy.items.add(fi(fbGraphx2).withFlex(.1f));
+    fbMiddle.items.add(fi(fbF1).withFlex(1.f));
+    fbMiddle.items.add(fi(fbOutput).withFlex(1.f));
+    fbMiddle.items.add(fi(fbGraphy).withFlex(3.f));
+    fbMain.items.add(fi(fbLorenz).withFlex(1.f));
+    fbMain.items.add(fi(fbMiddle).withFlex(2.f));
 
-    auto mixerZBounds = leftSide.removeFromLeft(knobSpacing);
-    levelZKnob.setBounds(mixerZBounds.removeFromTop(knobSize));
-    panZKnob.setBounds(mixerZBounds.removeFromTop(knobSize));
-
-    leftSide.removeFromLeft(groupSpacing);
-
-    // Output Column
-    auto outputBounds = leftSide.removeFromLeft(knobSpacing);
-    outputLevelKnob.setBounds(outputBounds.withSize(knobSize, knobSize).withY(0));
-
-    // --- Second Order Parameters (Bottom Row) ---
-    bottomArea.removeFromLeft(groupSpacing); // Add some padding
-    mxKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
-    myKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
-    mzKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
-    bottomArea.removeFromLeft(groupSpacing); // Space between groups
-    cxKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
-    cyKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
-    czKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
-
-    bottomArea.removeFromLeft(groupSpacing);
-    tamingKnob.setBounds(bottomArea.removeFromLeft(knobSpacing).withSize(knobSize, knobSize));
+    fbMain.performLayout(bounds);
 }

@@ -141,6 +141,8 @@ void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     pitchDetector.setBufferSize (pitchBufferSize);
     pitchDetector.setSampleRate (sampleRate);
     analysisBuffer.setSize(1, pitchBufferSize);
+
+    processSampleRate = sampleRate;
 }
 
 void LorenzAudioProcessor::releaseResources()
@@ -174,6 +176,38 @@ bool LorenzAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) c
   #endif
 }
 #endif
+
+void LorenzAudioProcessor::highPassFilter(juce::AudioBuffer<float>& buffer, float cutoffFreq)
+{
+    const int numChannels = buffer.getNumChannels();
+    const int numSamples = buffer.getNumSamples();
+
+    // Ensure state arrays are the correct size
+    jassert(hpf_prevInput.size() == numChannels);
+    jassert(hpf_prevOutput.size() == numChannels);
+
+    // Filter coefficients (RC filter)
+    float RC = 1.0f / (juce::MathConstants<float>::twoPi * cutoffFreq);
+    float dt = 1.0f / processSampleRate;
+    float alpha = RC / (RC + dt);
+
+    for (int channel = 0; channel < numChannels; ++channel)
+    {
+        auto* channelData = buffer.getWritePointer(channel);
+        float prevInput = hpf_prevInput[channel];
+        float prevOutput = hpf_prevOutput[channel];
+
+        for (int n = 0; n < numSamples; ++n)
+        {
+            float input = channelData[n];
+            channelData[n] = alpha * (prevOutput + input - prevInput);
+            prevOutput = channelData[n];
+            prevInput = input;
+        }
+        hpf_prevInput.set(channel, prevInput);
+        hpf_prevOutput.set(channel, prevOutput);
+    }
+}
 
 void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
@@ -228,9 +262,9 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
     // The state variables can have a large range, so we scale them down.
     // These are empirical values, you may want to adjust them.
-    const float xScale = 0.05f;
-    const float yScale = 0.05f;
-    const float zScale = 0.025f;
+    const float xScale = 0.025f;
+    const float yScale = 0.025f;
+    const float zScale = 0.0125f;
 
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
@@ -324,6 +358,8 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         timestepRangedParam->setValueNotifyingHost(normalizedValue);
     }
 
+    highPassFilter(buffer, 15.0f);
+
     // In case of more than 2 output channels, copy the stereo signal to them.
     for (int channel = 2; channel < totalNumOutputChannels; ++channel)
         buffer.copyFrom(channel, 0, buffer, channel % 2, 0, buffer.getNumSamples());
@@ -385,27 +421,48 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
                                                            juce::NormalisableRange<float>(0.0f, 10.0f, 0.01f),
                                                            8.0f / 3.0f));
 
+    std::function<juce::String(float, int)> scientificNotationStringFromValue = [](float v, int) -> juce::String
+    {
+        return juce::String::formatted("%.2e", v);
+    };
+
+    std::function<float(const juce::String&)> scientificNotationValueFromString = [](const juce::String& s) -> float
+    {
+        return s.getFloatValue();
+    };
+
     layout.add(std::make_unique<juce::AudioParameterFloat>("TIMESTEP", "Timestep",
                                                            juce::NormalisableRange<float>(0.0001f, 0.05f, 0.000001f, 0.5f), // Max value capped at 0.02 for stability
-                                                           0.01f));
+                                                           0.01f, juce::String(), juce::AudioProcessorParameter::genericParameter,
+                                                           scientificNotationStringFromValue,
+                                                           scientificNotationValueFromString));
     
     // --- Frequency Control ---
     layout.add(std::make_unique<juce::AudioParameterFloat>("TARGET_FREQ", "Target Freq",
                                                            juce::NormalisableRange<float>(0.0f, 5000.0f, 1.0f, 0.3f),
-                                                           0.0f, "Hz", juce::AudioProcessorParameter::genericParameter, [](float v, int) { return (v > 0.0f) ? juce::String(v, 1) + " Hz" : "Off"; }, nullptr));
+                                                           0.0f, "Hz", juce::AudioProcessorParameter::genericParameter,
+                                                           std::function<juce::String(float, int)>([](float v, int) {
+                                                               return (v > 0.0f) ? juce::String(v, 1) + " Hz" : "Off";
+                                                           }), nullptr));
 
     // Use a skewed range for finer control over smaller gain values.
     // Default values are set to the original stable values.
-    layout.add(std::make_unique<juce::AudioParameterFloat>("KP", "Prop. Gain", 
-                                                           juce::NormalisableRange<float>(0.0f, 1e-5f, 0.0f, 0.25f), 
-                                                           1e-6f));
-    layout.add(std::make_unique<juce::AudioParameterFloat>("KI", "Integ. Gain", 
-                                                           juce::NormalisableRange<float>(0.0f, 1e-6f, 0.0f, 0.25f), 
-                                                           2e-8f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("KP", "Prop. Gain",
+                                                           juce::NormalisableRange<float>(0.0f, 1e-5f, 0.0f, 0.25f),
+                                                           1e-6f, juce::String(), juce::AudioProcessorParameter::genericParameter,
+                                                           scientificNotationStringFromValue,
+                                                           scientificNotationValueFromString));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("KI", "Integ. Gain",
+                                                           juce::NormalisableRange<float>(0.0f, 1e-6f, 0.0f, 0.25f),
+                                                           2e-8f, juce::String(), juce::AudioProcessorParameter::genericParameter,
+                                                           scientificNotationStringFromValue,
+                                                           scientificNotationValueFromString));
     // The Kd term often needs a larger magnitude than Kp to be effective.
     layout.add(std::make_unique<juce::AudioParameterFloat>("KD", "Deriv. Gain",
                                                            juce::NormalisableRange<float>(0.0f, 1e-4f, 0.0f, 0.25f),
-                                                           0.000001f));
+                                                           0.000001f, juce::String(), juce::AudioProcessorParameter::genericParameter,
+                                                           scientificNotationStringFromValue,
+                                                           scientificNotationValueFromString));
 
     layout.add(std::make_unique<juce::AudioParameterChoice>("PITCH_SOURCE", "Pitch Source",
                                                            juce::StringArray { "X", "Y", "Z" },
@@ -463,7 +520,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
     // --- Taming Parameter ---
     layout.add(std::make_unique<juce::AudioParameterFloat>("TAMING", "Taming",
                                                            juce::NormalisableRange<float>(0.0f, 0.001f, 0.0f, 0.25f),
-                                                           0.00001f));
+                                                           0.00001f, juce::String(), juce::AudioProcessorParameter::genericParameter,
+                                                           scientificNotationStringFromValue,
+                                                           scientificNotationValueFromString));
 
 
     return layout;
