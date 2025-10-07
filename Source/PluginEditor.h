@@ -41,24 +41,24 @@ private:
     fxme::FxmeKnob sigmaKnob{audioProcessor.apvts, "SIGMA", juce::Colours::cyan},
                     rhoKnob{audioProcessor.apvts, "RHO", juce::Colours::cyan},
                     betaKnob{audioProcessor.apvts, "BETA", juce::Colours::cyan},
-                    timestepKnob{audioProcessor.apvts, "TIMESTEP", juce::Colours::yellow};
+                    timestepKnob{audioProcessor.apvts, "TIMESTEP", juce::Colours::orange};
     // Frequency Control
     fxme::FxmeKnob targetFrequencyKnob{audioProcessor.apvts, "TARGET_FREQ", juce::Colours::orange};
-    fxme::FxmeKnob kpKnob{audioProcessor.apvts, "KP", juce::Colours::cyan};
-    fxme::FxmeKnob kiKnob{audioProcessor.apvts, "KI", juce::Colours::magenta};
+    fxme::FxmeKnob kpKnob{audioProcessor.apvts, "KP", juce::Colours::lightgreen};
+    fxme::FxmeKnob kiKnob{audioProcessor.apvts, "KI", juce::Colours::lightgreen};
     fxme::FxmeKnob kdKnob{audioProcessor.apvts, "KD", juce::Colours::lightgreen};
     // X Mixer Knobs
-    fxme::FxmeKnob levelXKnob{audioProcessor.apvts, "LEVEL_X", juce::Colours::red},
-                    panXKnob{audioProcessor.apvts, "PAN_X", juce::Colours::red};
+    fxme::FxmeKnob levelXKnob{audioProcessor.apvts, "LEVEL_X", juce::Colours::red.brighter(0.7f)},
+                    panXKnob{audioProcessor.apvts, "PAN_X", juce::Colours::red.brighter(0.9f)};
 
 
     // Y Mixer Knobs
-    fxme::FxmeKnob levelYKnob{audioProcessor.apvts, "LEVEL_Y", juce::Colours::green},
-                    panYKnob{audioProcessor.apvts, "PAN_Y", juce::Colours::green};
+    fxme::FxmeKnob levelYKnob{audioProcessor.apvts, "LEVEL_Y", juce::Colours::green.brighter(0.7f)},
+                    panYKnob{audioProcessor.apvts, "PAN_Y", juce::Colours::green.brighter(0.9f)};
 
     // Z Mixer Knobs
-    fxme::FxmeKnob levelZKnob{audioProcessor.apvts, "LEVEL_Z", juce::Colours::blue},
-                    panZKnob{audioProcessor.apvts, "PAN_Z", juce::Colours::blue};
+    fxme::FxmeKnob levelZKnob{audioProcessor.apvts, "LEVEL_Z", juce::Colours::blue.brighter(0.7f)},
+                    panZKnob{audioProcessor.apvts, "PAN_Z", juce::Colours::blue.brighter(0.9f)};
 
     // Output Knob
     fxme::FxmeKnob outputLevelKnob{audioProcessor.apvts, "OUTPUT_LEVEL", juce::Colours::white};
