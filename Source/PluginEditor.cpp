@@ -34,6 +34,24 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     addAndMakeVisible(kdKnob);
     kdKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
 
+    addAndMakeVisible(attackKnob);
+    attackKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(decayKnob);
+    decayKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(sustainKnob);
+    sustainKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(releaseKnob);
+    releaseKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+
+    addAndMakeVisible(modAmountKnob);
+    modAmountKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
+    addAndMakeVisible(modTargetSelector);
+    if (auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("MOD_TARGET")))
+        modTargetSelector.addItemList(choiceParam->choices, 1);
+    modTargetAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "MOD_TARGET", modTargetSelector);
+    addAndMakeVisible(modTargetLabel);
+    modTargetLabel.setText("CC01 Mod Target", juce::dontSendNotification);
+    modTargetLabel.setJustificationType(juce::Justification::centred);
 
     addAndMakeVisible(levelXKnob);
     levelXKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
@@ -160,12 +178,13 @@ void LorenzAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds();
 
-    using fi = juce::FlexItem;
+    using fi = juce::FlexItem; // Using alias for brevity
 
     juce::FlexBox fbLorenz, fbFreqControl, fbOutput, fbMiddle, fbGraphx, fbGraphy, fbGraphx2;
     juce::FlexBox fbL1, fbL2, fbL3, fbL4, fbL5;
-    juce::FlexBox fbF1, fbF2, fbF11;
+    juce::FlexBox fbF1, fbF2, fbF11, fbMod;
     juce::FlexBox fbMain;
+    juce::FlexBox fbAdsr;
     
     fbL1.flexDirection = juce::FlexBox::Direction::row;
     fbL2.flexDirection = juce::FlexBox::Direction::row;
@@ -173,6 +192,7 @@ void LorenzAudioProcessorEditor::resized()
     fbL4.flexDirection = juce::FlexBox::Direction::row;
     fbL5.flexDirection = juce::FlexBox::Direction::row;
     fbF1.flexDirection = juce::FlexBox::Direction::row;
+    fbMod.flexDirection = juce::FlexBox::Direction::column;
     fbF11.flexDirection = juce::FlexBox::Direction::column;
     fbF2.flexDirection = juce::FlexBox::Direction::row;
     fbMain.flexDirection = juce::FlexBox::Direction::row;
@@ -180,7 +200,6 @@ void LorenzAudioProcessorEditor::resized()
     fbGraphx.flexDirection = juce::FlexBox::Direction::row;
     fbGraphy.flexDirection = juce::FlexBox::Direction::column;
     fbGraphx2.flexDirection = juce::FlexBox::Direction::row;
-
 
     fbLorenz.flexDirection = juce::FlexBox::Direction::column;
     fbFreqControl.flexDirection = juce::FlexBox::Direction::column;
@@ -190,18 +209,18 @@ void LorenzAudioProcessorEditor::resized()
     fbL1.items.add(fi(sigmaKnob).withFlex(1.f));
     fbL1.items.add(fi(rhoKnob).withFlex(1.f));
     fbL1.items.add(fi(betaKnob).withFlex(1.f));
-    fbL2.items.add(fi(mxKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL2.items.add(fi(myKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL2.items.add(fi(mzKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL3.items.add(fi(cxKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL3.items.add(fi(cyKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL3.items.add(fi(czKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL4.items.add(fi(levelXKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL4.items.add(fi(levelYKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL4.items.add(fi(levelZKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL5.items.add(fi(panXKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL5.items.add(fi(panYKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbL5.items.add(fi(panZKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
+    fbL2.items.add(fi(mxKnob).withFlex(1.f));
+    fbL2.items.add(fi(myKnob).withFlex(1.f));
+    fbL2.items.add(fi(mzKnob).withFlex(1.f));
+    fbL3.items.add(fi(cxKnob).withFlex(1.f));
+    fbL3.items.add(fi(cyKnob).withFlex(1.f));
+    fbL3.items.add(fi(czKnob).withFlex(1.f));
+    fbL4.items.add(fi(levelXKnob).withFlex(1.f));
+    fbL4.items.add(fi(levelYKnob).withFlex(1.f));
+    fbL4.items.add(fi(levelZKnob).withFlex(1.f));
+    fbL5.items.add(fi(panXKnob).withFlex(1.f));
+    fbL5.items.add(fi(panYKnob).withFlex(1.f));
+    fbL5.items.add(fi(panZKnob).withFlex(1.f));
     fbLorenz.items.add(fi(fbL1).withFlex(1.f));
     fbLorenz.items.add(fi(fbL2).withFlex(1.f));
     fbLorenz.items.add(fi(fbL3).withFlex(1.f));
@@ -216,9 +235,18 @@ void LorenzAudioProcessorEditor::resized()
     fbF1.items.add(fi(kpKnob).withFlex(1.f));
     fbF1.items.add(fi(kiKnob).withFlex(1.f));
     fbF1.items.add(fi(kdKnob).withFlex(1.f));
-    fbOutput.items.add(fi(outputLevelKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbOutput.items.add(fi(tamingKnob).withFlex(1.f).withMargin(juce::FlexItem::Margin(10,0,0,0)));
-    fbOutput.items.add(fi(resetButton).withFlex(1.f).withMargin(40));
+    fbAdsr.items.add(fi(attackKnob).withFlex(1.f));
+    fbAdsr.items.add(fi(decayKnob).withFlex(1.f));
+    fbAdsr.items.add(fi(sustainKnob).withFlex(1.f));
+    fbAdsr.items.add(fi(releaseKnob).withFlex(1.f));
+    fbMod.items.add(fi(modTargetLabel).withFlex(1.f));
+    fbMod.items.add(fi(modTargetSelector).withFlex(1.f).withMargin(juce::FlexItem::Margin(0,0,10,0)));
+    fbMod.items.add(fi(modAmountKnob).withFlex(2.f));
+    fbOutput.items.add(fi(fbAdsr).withFlex(4.f).withMargin(juce::FlexItem::Margin(20,0,10,0)));
+    fbOutput.items.add(fi(fbMod).withFlex(1.5f).withMargin(juce::FlexItem::Margin(0, 0, 0, 20)));
+    fbOutput.items.add(fi(outputLevelKnob).withFlex(2.f).withMargin(juce::FlexItem::Margin(10,0,10,10)));
+    fbOutput.items.add(fi(tamingKnob).withFlex(2.f).withMargin(juce::FlexItem::Margin(10,0,10,10)));
+    fbOutput.items.add(fi(resetButton).withFlex(1.5f).withMargin(juce::FlexItem::Margin(40,10,40,10)));
     fbGraphx.items.add(fi(attractorComponent).withFlex(1.f));
     fbGraphx.items.add(fi(viewZoomZSlider).withFlex(.05f));
     fbGraphx.items.add(fi(viewZoomYSlider).withFlex(.05f));
@@ -229,8 +257,8 @@ void LorenzAudioProcessorEditor::resized()
     fbGraphx2.items.add(fi(viewZoomZLabel).withFlex(.05f));
     fbGraphy.items.add(fi(fbGraphx).withFlex(1.f));
     fbGraphy.items.add(fi(fbGraphx2).withFlex(.1f));
-    fbMiddle.items.add(fi(fbF1).withFlex(1.f));
-    fbMiddle.items.add(fi(fbOutput).withFlex(1.f));
+    fbMiddle.items.add(fi(fbF1).withFlex(.9f));
+    fbMiddle.items.add(fi(fbOutput).withFlex(1.1f));
     fbMiddle.items.add(fi(fbGraphy).withFlex(3.f));
     fbMain.items.add(fi(fbLorenz).withFlex(1.f));
     fbMain.items.add(fi(fbMiddle).withFlex(2.f));

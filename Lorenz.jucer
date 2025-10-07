@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="ZaoXjV" name="Lorenz" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
+              pluginFormats="buildStandalone,buildVST,buildVST3" pluginManufacturerCode="FXME"
+              pluginCode="LORZ">
   <MAINGROUP id="udRHH5" name="Lorenz">
     <GROUP id="{F7CFE534-78AE-F962-5711-EFB010126FC2}" name="Source">
       <FILE id="pQtrTO" name="AttractorComponent.h" compile="0" resource="0"

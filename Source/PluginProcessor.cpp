@@ -36,6 +36,13 @@ LorenzAudioProcessor::LorenzAudioProcessor()
       viewZoomXParam(apvts.getRawParameterValue("VIEW_ZOOM_X")),
       viewZoomZParam(apvts.getRawParameterValue("VIEW_ZOOM_Z")),
       viewZoomYParam(apvts.getRawParameterValue("VIEW_ZOOM_Y")),
+      attackParam(apvts.getRawParameterValue("ATTACK")),
+      decayParam(apvts.getRawParameterValue("DECAY")),
+      sustainParam(apvts.getRawParameterValue("SUSTAIN")),
+      releaseParam(apvts.getRawParameterValue("RELEASE")),
+      modTargetParam(apvts.getRawParameterValue("MOD_TARGET")),
+      modAmountParam(apvts.getRawParameterValue("MOD_AMOUNT")),
+      targetFrequencyRangedParam(static_cast<juce::RangedAudioParameter*>(apvts.getParameter("TARGET_FREQ"))),
       targetFrequencyParam(apvts.getRawParameterValue("TARGET_FREQ")),
       kpParam(apvts.getRawParameterValue("KP")),
       kiParam(apvts.getRawParameterValue("KI")),
@@ -67,11 +74,7 @@ const juce::String LorenzAudioProcessor::getName() const
 
 bool LorenzAudioProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
-    return true;
-   #else
-    return false;
-   #endif
+   return true;
 }
 
 bool LorenzAudioProcessor::producesMidi() const
@@ -130,6 +133,9 @@ void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     lorenzOsc.setParameters(sigmaParam, rhoParam, betaParam, mxParam, myParam, mzParam, cxParam, cyParam, czParam, tamingParam);
     lorenzOsc.setTimestep(timestepParam);
 
+    // Prepare ADSR
+    ampAdsr.setSampleRate(sampleRate);
+
     // Calculate how many audio samples to wait before generating the next point for the GUI
     pointGenerationInterval = static_cast<int>(sampleRate / pointsPerSecond);
 
@@ -142,6 +148,9 @@ void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     pitchDetector.setSampleRate (sampleRate);
     analysisBuffer.setSize(1, pitchBufferSize);
 
+    // Initialize HPF state arrays to match the number of output channels
+    hpf_prevInput.resize(getTotalNumOutputChannels());
+    hpf_prevOutput.resize(getTotalNumOutputChannels());
     processSampleRate = sampleRate;
 }
 
@@ -221,6 +230,83 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     // This is here to avoid people getting screaming feedback
     // when they first compile a plugin.
     // As our oscillator is generating the signal, we can clear the buffer first.
+
+    // --- Update ADSR Parameters ---
+    ampAdsrParams.attack = attackParam->load();
+    ampAdsrParams.decay = decayParam->load();
+    ampAdsrParams.sustain = sustainParam->load();
+    ampAdsrParams.release = releaseParam->load();
+    ampAdsr.setParameters(ampAdsrParams);
+
+    // --- Modulation Setup ---
+    const auto modAmount = modAmountParam->load();
+    const auto modTarget = static_cast<int>(modTargetParam->load());
+    // Create a map for easy lookup of parameters by their index in the choice parameter
+    const std::map<int, std::atomic<float>*> modTargetMap = { {1, sigmaParam}, {2, rhoParam}, {3, betaParam}, {4, mxParam}, {5, myParam}, {6, mzParam}, {7, cxParam}, {8, cyParam}, {9, czParam}, {10, tamingParam} };
+    // Create a map to get the parameter ID string from the choice index
+    const std::map<int, juce::String> modTargetIdMap = { {1, "SIGMA"}, {2, "RHO"}, {3, "BETA"}, {4, "MX"}, {5, "MY"}, {6, "MZ"}, {7, "CX"}, {8, "CY"}, {9, "CZ"}, {10, "TAMING"} };
+
+
+    // --- MIDI Event Handling ---
+    for (const auto metadata : midiMessages)
+    {
+        const auto msg = metadata.getMessage();
+        if (msg.isNoteOn())
+        {
+            const int noteNumber = msg.getNoteNumber();
+            
+            // Add note to the stack if it's not already there
+            if (!noteStack.contains(noteNumber))
+                noteStack.add(noteNumber);
+
+            if (currentNote != noteNumber)
+            {
+                currentNote = noteNumber;
+                // If this is the first note being played, trigger the attack.
+                // Otherwise, we just change frequency (legato style).
+                if (noteStack.size() == 1)
+                    ampAdsr.noteOn();
+            }
+            
+            // Update target frequency based on the new note
+            const float newFreq = (float) juce::MidiMessage::getMidiNoteInHertz(currentNote);
+            // Convert the frequency to a normalized value (0.0 to 1.0) and set the parameter.
+            // This ensures the GUI is notified of the change.
+            auto normalizedFreq = targetFrequencyRangedParam->getNormalisableRange().convertTo0to1(newFreq);
+            targetFrequencyRangedParam->setValueNotifyingHost(normalizedFreq);
+        }
+        else if (msg.isNoteOff())
+        {
+            const int noteNumber = msg.getNoteNumber();
+            noteStack.removeFirstMatchingValue(noteNumber);
+
+            // If the released note was the one playing, trigger release.
+            if (currentNote == noteNumber)
+            {
+                // If other notes are still held, switch to the last one on the stack.
+                if (noteStack.size() > 0)
+                {
+                    currentNote = noteStack.getLast();
+                    const float newFreq = (float) juce::MidiMessage::getMidiNoteInHertz(currentNote);
+                    auto normalizedFreq = targetFrequencyRangedParam->getNormalisableRange().convertTo0to1(newFreq);
+                    targetFrequencyRangedParam->setValueNotifyingHost(normalizedFreq);
+                }
+                else // Otherwise, trigger release and reset note state.
+                {
+                    ampAdsr.noteOff();
+                    currentNote = -1;
+                }
+            }
+        }
+        else if (msg.isController() && msg.getControllerNumber() == 1)
+        {
+            // Store the last CC01 value, normalized to 0.0 - 1.0
+            lastCC01Value = msg.getControllerValue() / 127.0f;
+            //std::cout << "CC01: " << lastCC01Value << std::endl;
+        }
+    }
+    midiMessages.clear(); // We've processed the MIDI messages
+
     buffer.clear();
 
     // Create a temporary buffer to hold the signal for pitch analysis for the current block.
@@ -245,6 +331,10 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         *timestepParam = dtTarget;
         lastError = 0.0f;
         measuredFrequency = 0.0f;
+        // Reset the high-pass filter's state
+        for (int i = 0; i < hpf_prevInput.size(); ++i) hpf_prevInput.set(i, 0.0f);
+        for (int i = 0; i < hpf_prevOutput.size(); ++i) hpf_prevOutput.set(i, 0.0f);
+
         analysisBuffer.clear();
     }
 
@@ -268,10 +358,51 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
 
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
+        // --- Apply Modulation ---
+        // This is done per-sample in case the CC value changes rapidly.
+        if (modTarget > 0 && modAmount != 0.0f)
+        {
+            // Find the parameter ID and the atomic float pointer using our maps
+            auto idIt = modTargetIdMap.find(modTarget);
+            auto paramIt = modTargetMap.find(modTarget);
+
+            if (idIt != modTargetIdMap.end() && paramIt != modTargetMap.end())
+            {
+                const juce::String& paramId = idIt->second;
+                auto* paramToMod = paramIt->second;
+                auto* rangedParam = static_cast<juce::RangedAudioParameter*>(apvts.getParameter(paramId));
+                const auto range = rangedParam->getNormalisableRange();
+
+                // Get the real-world (un-normalized) value by converting the normalized value back.
+                const float baseValue = range.convertFrom0to1(rangedParam->getValue());
+                const float modValue = modAmount * lastCC01Value; // Bipolar modulation value
+
+                float finalValue;
+                if (modValue >= 0.0f)
+                {
+                    // Modulate towards max
+                    finalValue = baseValue + modValue * (range.getRange().getEnd() - baseValue);
+                }
+                else // modValue < 0.0f
+                {
+                    // Modulate towards min
+                    finalValue = baseValue + modValue * (baseValue - range.getRange().getStart());
+                }
+                paramToMod->store(finalValue);
+            }
+        }
+
         // We need a separate buffer for the pitch analysis signal
         // to ensure it's pre-fader and pre-panner.
         float pitchSourceSample = 0.0f;
         auto [x, y, z] = lorenzOsc.getNextSample();
+
+        // --- Stability Guard ---
+        // If the oscillator becomes unstable, it can return non-finite values.
+        // We replace them with 0 to prevent them from corrupting the filter state.
+        if (!std::isfinite(x)) x = 0.0;
+        if (!std::isfinite(y)) y = 0.0;
+        if (!std::isfinite(z)) z = 0.0;
 
         // Push points to the FIFO at a controlled rate, not on every sample.
         if (--samplesUntilNextPoint <= 0)
@@ -301,18 +432,21 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         const float zSample = static_cast<float>(z) * zScale * levelZ;
 
         // Apply panning (constant power)
-        const float xL = xSample * std::cos((panX + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
-        const float xR = xSample * std::sin((panX + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float xL = xSample * juce::dsp::FastMathApproximations::cos((panX + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float xR = xSample * juce::dsp::FastMathApproximations::sin((panX + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
 
-        const float yL = ySample * std::cos((panY + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
-        const float yR = ySample * std::sin((panY + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float yL = ySample * juce::dsp::FastMathApproximations::cos((panY + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float yR = ySample * juce::dsp::FastMathApproximations::sin((panY + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
 
-        const float zL = zSample * std::cos((panZ + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
-        const float zR = zSample * std::sin((panZ + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float zL = zSample * juce::dsp::FastMathApproximations::cos((panZ + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float zR = zSample * juce::dsp::FastMathApproximations::sin((panZ + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+
+        // Get the next sample from the ADSR envelope
+        const float adsrSample = ampAdsr.getNextSample();
 
         // Mix all sources and apply master output level
-        leftChannel[sample] = (xL + yL + zL) * outputLevel;
-        rightChannel[sample] = (xR + yR + zR) * outputLevel;
+        leftChannel[sample]  = (xL + yL + zL) * outputLevel * adsrSample;
+        rightChannel[sample] = (xR + yR + zR) * outputLevel * adsrSample;
     }
     
     // --- Frequency Detection & Control ---
@@ -330,7 +464,9 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         measuredFrequency = 0.0f; // Indicate no frequency found
 
     // Now, run the PID controller based on the new measurement to determine the timestep for the *next* block.
-    if (targetFrequency > 0.0f) // A target frequency of 0 disables the controller
+    // Only run the PID controller if a note is being played (targetFrequency > 0)
+    // and the ADSR is not in its idle state.
+    if (targetFrequency > 0.0f && ampAdsr.isActive())
     {
         const float currentError = targetFrequency - measuredFrequency.load();
 
@@ -386,14 +522,25 @@ void LorenzAudioProcessor::requestOscillatorReset()
 void LorenzAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    // The AudioProcessorValueTreeState makes this easy by creating an XML representation of its state.
+    auto state = apvts.copyState();
+    std::unique_ptr<juce::XmlElement> xml (state.createXml());
+    copyXmlToBinary (*xml, destData);
 }
 
 void LorenzAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+
+    if (xmlState.get() != nullptr)
+    {
+        if (xmlState->hasTagName (apvts.state.getType()))
+        {
+            apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
+        }
+    }
 }
 
 //==============================================================================
@@ -437,6 +584,25 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
                                                            scientificNotationStringFromValue,
                                                            scientificNotationValueFromString));
     
+    // --- ADSR Parameters ---
+    layout.add(std::make_unique<juce::AudioParameterFloat>("ATTACK", "Attack",
+                                                           juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.5f), 0.1f, "s"));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("DECAY", "Decay",
+                                                           juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.5f), 0.1f, "s"));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("SUSTAIN", "Sustain",
+                                                           juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f), 0.8f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("RELEASE", "Release",
+                                                           juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.5f), 0.5f, "s"));
+
+    // --- Modulation Parameters ---
+    layout.add(std::make_unique<juce::AudioParameterChoice>("MOD_TARGET", "Mod Target",
+                                                            juce::StringArray{ "Off", "Sigma", "Rho", "Beta", "Mass X", "Mass Y", "Mass Z", "Damp X", "Damp Y", "Damp Z", "Taming" },
+                                                            0));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>("MOD_AMOUNT", "Mod Amount",
+                                                           juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 0.0f));
+
+
     // --- Frequency Control ---
     layout.add(std::make_unique<juce::AudioParameterFloat>("TARGET_FREQ", "Target Freq",
                                                            juce::NormalisableRange<float>(0.0f, 5000.0f, 1.0f, 0.3f),

@@ -128,7 +128,18 @@ private:
     std::atomic<float>* viewZoomZParam = nullptr;
     std::atomic<float>* viewZoomYParam = nullptr;
 
+    // ADSR Parameters
+    std::atomic<float>* attackParam = nullptr;
+    std::atomic<float>* decayParam = nullptr;
+    std::atomic<float>* sustainParam = nullptr;
+    std::atomic<float>* releaseParam = nullptr;
+
+    // Modulation Parameters
+    std::atomic<float>* modTargetParam = nullptr;
+    std::atomic<float>* modAmountParam = nullptr;
+
     // Frequency control
+    juce::RangedAudioParameter* targetFrequencyRangedParam = nullptr;
     std::atomic<float>* targetFrequencyParam = nullptr;
     std::atomic<float>* kpParam = nullptr;
     std::atomic<float>* kiParam = nullptr;
@@ -142,6 +153,13 @@ private:
     std::atomic<float>* cyParam = nullptr;
     std::atomic<float>* czParam = nullptr;
     std::atomic<float>* tamingParam = nullptr;
+
+    // --- Monophonic Synth State ---
+    juce::ADSR ampAdsr;
+    juce::ADSR::Parameters ampAdsrParams;
+    juce::Array<int> noteStack; // A simple stack to track the last notes played
+    int currentNote = -1;
+    float lastCC01Value = 0.0f; // To hold the latest CC01 value (0.0 - 1.0)
 
     // --- Frequency Detection & Control ---
     adamski::PitchMPM pitchDetector;

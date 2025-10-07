@@ -47,6 +47,19 @@ private:
     fxme::FxmeKnob kpKnob{audioProcessor.apvts, "KP", juce::Colours::lightgreen};
     fxme::FxmeKnob kiKnob{audioProcessor.apvts, "KI", juce::Colours::lightgreen};
     fxme::FxmeKnob kdKnob{audioProcessor.apvts, "KD", juce::Colours::lightgreen};
+
+    // ADSR Knobs
+    fxme::FxmeKnob attackKnob{audioProcessor.apvts, "ATTACK", juce::Colours::yellow};
+    fxme::FxmeKnob decayKnob{audioProcessor.apvts, "DECAY", juce::Colours::yellow};
+    fxme::FxmeKnob sustainKnob{audioProcessor.apvts, "SUSTAIN", juce::Colours::yellow};
+    fxme::FxmeKnob releaseKnob{audioProcessor.apvts, "RELEASE", juce::Colours::yellow};
+
+    // Modulation Controls
+    juce::ComboBox modTargetSelector;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> modTargetAttachment;
+    juce::Label modTargetLabel;
+    fxme::FxmeKnob modAmountKnob{audioProcessor.apvts, "MOD_AMOUNT", juce::Colours::magenta};
+
     // X Mixer Knobs
     fxme::FxmeKnob levelXKnob{audioProcessor.apvts, "LEVEL_X", juce::Colours::red.brighter(0.7f)},
                     panXKnob{audioProcessor.apvts, "PAN_X", juce::Colours::red.brighter(0.9f)};
