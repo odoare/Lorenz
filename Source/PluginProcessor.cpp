@@ -539,6 +539,8 @@ void LorenzAudioProcessor::setStateInformation (const void* data, int sizeInByte
         if (xmlState->hasTagName (apvts.state.getType()))
         {
             apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
+            // This is useful for creating new factory presets.
+            std::cout << (apvts.copyState().createXml()->toString()) << std::endl;
         }
     }
 }
