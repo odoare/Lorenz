@@ -57,6 +57,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     void requestOscillatorReset();
+    void saveStateToFile();
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     juce::AudioProcessorValueTreeState apvts{*this,nullptr,"Parameters",createParameters()};

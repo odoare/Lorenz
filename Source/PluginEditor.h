@@ -100,6 +100,7 @@ private:
     juce::Label pitchSourceLabel;
 
     juce::TextButton resetButton { "Reset Oscillator" };
+    juce::TextButton savePresetButton { "Save Preset" };
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LorenzAudioProcessorEditor)

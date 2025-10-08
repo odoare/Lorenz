@@ -518,6 +518,32 @@ void LorenzAudioProcessor::requestOscillatorReset()
     resetRequested = true;
 }
 
+void LorenzAudioProcessor::saveStateToFile()
+{
+    // We need to launch the file chooser asynchronously.
+    // We'll use a shared_ptr to keep the FileChooser object alive until the callback is finished.
+    auto fileChooser = std::make_shared<juce::FileChooser>("Save Preset",
+                                                           juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+                                                           "*.xml",
+                                                           true);
+
+    auto flags = juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::warnAboutOverwriting;
+
+    fileChooser->launchAsync(flags, [this, fileChooser](const juce::FileChooser& chooser)
+    {
+        juce::File file = chooser.getResult();
+        if (file != juce::File{})
+        {
+            // Get the current state from the APVTS.
+            auto state = apvts.copyState();
+            std::unique_ptr<juce::XmlElement> xml(state.createXml());
+
+            // Write the XML to the chosen file.
+            xml->writeTo(file);
+        }
+    });
+}
+
 //==============================================================================
 void LorenzAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
