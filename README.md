@@ -26,12 +26,20 @@ To create a more versatile and controllable musical instrument, this plugin uses
 
 ### Second-Order System
 
-The system has been extended to a **second-order system**, similar to a mass-spring-damper model. We now have velocity (`vx`, `vy`, `vz`) and acceleration (`dvx/dt`, `dvy/dt`, `dvz/dt`). This introduces inertia and damping into the system, allowing for a wider range of sonic textures, from smooth, resonant tones to percussive hits.
+The system has been extended to a **second-order system**, similar to a mass-spring-damper model. We now have velocity (`vx`, `vy`, `vz`) and acceleration (`dvx/dt`, `dvy/dt`, `dvz/dt`). This introduces inertia and damping into the system, allowing for a wider range of sonic textures, in particular more parameters regions where the system has periodic oscillations.
+
+The full system of equations simulated in the plugin is:
+
+```
+MX * d²x/dt² = σ * (y - x) - CX * dx/dt - Taming * (dx/dt)³
+MY * d²y/dt² = x * (ρ - z) - y - CY * dy/dt - Taming * (dy/dt)³
+MZ * d²z/dt² = x * y - β * z - CZ * dz/dt - Taming * (dz/dt)³
+```
 
 This adds new parameters:
 *   **Mass (`MX`, `MY`, `MZ`):** Controls the inertia of each component. Higher mass values will make the system react more slowly to changes.
-*   **Damping (`CX`, `CY`, `CZ`):** Acts as a "brake" on the system's velocity, controlling the decay of oscillations.
-
+*   **Damping (`CX`, `CY`, `CZ`):** Acts as a linear "brake" on the system's velocity, controlling the decay of oscillations.
+ 
 ### Taming Parameter
 
 Chaotic systems can sometimes become unstable and "blow up," with their state variables shooting towards infinity, which would result in silence or extreme digital noise. The **Taming** parameter introduces a non-linear damping force that gets stronger as the system's velocity increases. This helps to keep the attractor within a stable, bounded region, making it more musically reliable without sacrificing its chaotic nature.
