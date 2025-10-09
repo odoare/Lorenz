@@ -170,6 +170,21 @@ void LorenzAudioProcessor::changeProgramName (int index, const juce::String& new
     // You could implement user-renamable presets here if desired.
 }
 
+void LorenzAudioProcessor::resetSmoothedValues()
+{
+    // This function forces an immediate update of all smoothed values,
+    // bypassing the ramp. This is crucial when loading a new state or resetting.
+    smoothedLevelX.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (levelXParam->load()));
+    smoothedPanX.setCurrentAndTargetValue (panXParam->load());
+    smoothedLevelY.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (levelYParam->load()));
+    smoothedPanY.setCurrentAndTargetValue (panYParam->load());
+    smoothedLevelZ.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (levelZParam->load()));
+    smoothedPanZ.setCurrentAndTargetValue (panZParam->load());
+    smoothedOutputLevel.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (outputLevelParam->load()));
+
+    lorenzOsc.updateParameters();
+}
+
 //==============================================================================
 void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
@@ -198,6 +213,17 @@ void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     hpf_prevInput.resize(getTotalNumOutputChannels());
     hpf_prevOutput.resize(getTotalNumOutputChannels());
     processSampleRate = sampleRate;
+
+    // Prepare smoothed values with a ramp length (e.g., 50ms)
+    const double rampTimeSeconds = 0.05;
+    smoothedLevelX.reset (sampleRate, rampTimeSeconds);
+    smoothedPanX.reset (sampleRate, rampTimeSeconds);
+    smoothedLevelY.reset (sampleRate, rampTimeSeconds);
+    smoothedPanY.reset (sampleRate, rampTimeSeconds);
+    smoothedLevelZ.reset (sampleRate, rampTimeSeconds);
+    smoothedPanZ.reset (sampleRate, rampTimeSeconds);
+    smoothedOutputLevel.reset (sampleRate, rampTimeSeconds);
+    resetSmoothedValues(); // Initialize them to current parameter values
 }
 
 void LorenzAudioProcessor::releaseResources()
@@ -382,6 +408,7 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         for (int i = 0; i < hpf_prevOutput.size(); ++i) hpf_prevOutput.set(i, 0.0f);
 
         analysisBuffer.clear();
+        resetSmoothedValues();
     }
 
     // Load parameter values.
@@ -395,7 +422,15 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     const float panZ = panZParam->load();
     const float outputLevel = juce::Decibels::decibelsToGain(outputLevelParam->load());
     const float targetFrequency = targetFrequencyParam->load();
-
+    
+    // Set target values for smoothed parameters at the start of the block
+    smoothedLevelX.setTargetValue (levelX);
+    smoothedPanX.setTargetValue (panX);
+    smoothedLevelY.setTargetValue (levelY);
+    smoothedPanY.setTargetValue (panY);
+    smoothedLevelZ.setTargetValue (levelZ);
+    smoothedPanZ.setTargetValue (panZ);
+    smoothedOutputLevel.setTargetValue (outputLevel);
     // The state variables can have a large range, so we scale them down.
     // These are empirical values, you may want to adjust them.
     const float xScale = 0.025f;
@@ -473,26 +508,35 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         pitchAnalysisBlock.setSample(0, sample, pitchSourceSample);
 
         // Scale and apply gain to each component
-        const float xSample = static_cast<float>(x) * xScale * levelX;
-        const float ySample = static_cast<float>(y) * yScale * levelY;
-        const float zSample = static_cast<float>(z) * zScale * levelZ;
+        const float currentLevelX = smoothedLevelX.getNextValue();
+        const float currentLevelY = smoothedLevelY.getNextValue();
+        const float currentLevelZ = smoothedLevelZ.getNextValue();
+
+        const float xSample = static_cast<float>(x) * xScale * currentLevelX;
+        const float ySample = static_cast<float>(y) * yScale * currentLevelY;
+        const float zSample = static_cast<float>(z) * zScale * currentLevelZ;
 
         // Apply panning (constant power)
-        const float xL = xSample * juce::dsp::FastMathApproximations::cos((panX + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
-        const float xR = xSample * juce::dsp::FastMathApproximations::sin((panX + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float currentPanX = smoothedPanX.getNextValue();
+        const float xL = xSample * juce::dsp::FastMathApproximations::cos((currentPanX + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float xR = xSample * juce::dsp::FastMathApproximations::sin((currentPanX + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
 
-        const float yL = ySample * juce::dsp::FastMathApproximations::cos((panY + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
-        const float yR = ySample * juce::dsp::FastMathApproximations::sin((panY + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float currentPanY = smoothedPanY.getNextValue();
+        const float yL = ySample * juce::dsp::FastMathApproximations::cos((currentPanY + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float yR = ySample * juce::dsp::FastMathApproximations::sin((currentPanY + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
 
-        const float zL = zSample * juce::dsp::FastMathApproximations::cos((panZ + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
-        const float zR = zSample * juce::dsp::FastMathApproximations::sin((panZ + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float currentPanZ = smoothedPanZ.getNextValue();
+        const float zL = zSample * juce::dsp::FastMathApproximations::cos((currentPanZ + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        const float zR = zSample * juce::dsp::FastMathApproximations::sin((currentPanZ + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
 
         // Get the next sample from the ADSR envelope
         const float adsrSample = ampAdsr.getNextSample();
+        
+        const float currentOutputLevel = smoothedOutputLevel.getNextValue();
 
         // Mix all sources and apply master output level
-        leftChannel[sample]  = (xL + yL + zL) * outputLevel * adsrSample;
-        rightChannel[sample] = (xR + yR + zR) * outputLevel * adsrSample;
+        leftChannel[sample]  = (xL + yL + zL) * currentOutputLevel * adsrSample;
+        rightChannel[sample] = (xR + yR + zR) * currentOutputLevel * adsrSample;
     }
     
     // --- Frequency Detection & Control ---
@@ -623,6 +667,7 @@ void LorenzAudioProcessor::setStateInformation (const void* data, int sizeInByte
         // it's always considered the "User" program.
         currentProgram = tree.getProperty("currentProgram", factoryPresets.size());
         apvts.replaceState (tree);
+        resetSmoothedValues();
     }
 }
 
@@ -781,11 +826,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
                                                            juce::NormalisableRange<float>(0.001f, 0.02f, 0.001f, 0.5f), 0.005f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("CX", "Damping X",
-                                                           juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f, 0.5f), 1.0f));
+                                                           juce::NormalisableRange<float>(0.0f, 2.0f, 0.001f, 0.5f), 1.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("CY", "Damping Y",
-                                                           juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f, 0.5f), 1.0f));
+                                                           juce::NormalisableRange<float>(0.0f, 2.0f, 0.001f, 0.5f), 1.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("CZ", "Damping Z",
-                                                           juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f, 0.5f), 1.0f));
+                                                           juce::NormalisableRange<float>(0.0f, 2.0f, 0.001f, 0.5f), 1.0f));
 
     // --- Taming Parameter ---
     layout.add(std::make_unique<juce::AudioParameterFloat>("TAMING", "Taming",

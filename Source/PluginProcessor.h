@@ -196,6 +196,14 @@ private:
     bool isLoadingPreset = false;
     bool isHostLoadingState = false;
 
+    // Smoothed values for mixer controls to prevent clicks
+    juce::SmoothedValue<float> smoothedLevelX, smoothedPanX;
+    juce::SmoothedValue<float> smoothedLevelY, smoothedPanY;
+    juce::SmoothedValue<float> smoothedLevelZ, smoothedPanZ;
+    juce::SmoothedValue<float> smoothedOutputLevel;
+
+    void resetSmoothedValues();
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LorenzAudioProcessor)
 };

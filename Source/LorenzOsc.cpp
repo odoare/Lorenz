@@ -43,6 +43,10 @@ void LorenzOsc::reset()
     vx = 0.0;
     vy = 0.0;
     vz = 0.0;
+
+    // It's crucial to also reset the internal state of the smoothed parameters.
+    // updateParameters() snaps them to their target values immediately.
+    updateParameters();
 }
 
 void LorenzOsc::setParameters(const std::atomic<float>* newSigma, const std::atomic<float>* newRho, const std::atomic<float>* newBeta,
