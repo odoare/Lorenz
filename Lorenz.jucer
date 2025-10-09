@@ -12,6 +12,8 @@
       <FILE id="qRyR8K" name="LowMach.xml" compile="0" resource="1" file="Presets/LowMach.xml"/>
       <FILE id="owb1AH" name="PeriodDoubling.xml" compile="0" resource="1"
             file="Presets/PeriodDoubling.xml"/>
+      <FILE id="HI5n2Y" name="Pipe1.xml" compile="0" resource="1" file="Presets/Pipe1.xml"/>
+      <FILE id="muGGq0" name="Pipe2.xml" compile="0" resource="1" file="Presets/Pipe2.xml"/>
       <FILE id="B7844D" name="SlightlyChaotic.xml" compile="0" resource="1"
             file="Presets/SlightlyChaotic.xml"/>
       <FILE id="j0ltWD" name="VBoat.xml" compile="0" resource="1" file="Presets/VBoat.xml"/>
