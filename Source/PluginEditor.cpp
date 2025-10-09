@@ -150,7 +150,7 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
 
     startTimerHz(30); // Update the frequency display 30 times per second
 
-    setSize (800, 600);
+    setSize (820, 600);
 }
 
 LorenzAudioProcessorEditor::~LorenzAudioProcessorEditor()
@@ -256,8 +256,8 @@ void LorenzAudioProcessorEditor::resized()
 
     fbOutput.items.add(fi(fbAdsr).withFlex(4.f).withMargin(juce::FlexItem::Margin(20,0,10,0)));
     fbOutput.items.add(fi(fbMod).withFlex(1.5f).withMargin(juce::FlexItem::Margin(0, 0, 0, 20)));
-    fbOutput.items.add(fi(outputLevelKnob).withFlex(2.f).withMargin(juce::FlexItem::Margin(10,0,10,10)));
-    fbOutput.items.add(fi(tamingKnob).withFlex(2.f).withMargin(juce::FlexItem::Margin(10,0,10,10)));
+    fbOutput.items.add(fi(outputLevelKnob).withFlex(1.5f).withMargin(juce::FlexItem::Margin(10,0,10,10)));
+    fbOutput.items.add(fi(tamingKnob).withFlex(1.5f).withMargin(juce::FlexItem::Margin(10,0,10,10)));
     fbOutput.items.add(fi(fbButtons).withFlex(1.5f).withMargin(juce::FlexItem::Margin(20, 0, 20, 0)));
     fbGraphx.items.add(fi(attractorComponent).withFlex(1.f));
     fbGraphx.items.add(fi(viewZoomZSlider).withFlex(.05f));
@@ -273,7 +273,7 @@ void LorenzAudioProcessorEditor::resized()
     fbMiddle.items.add(fi(fbOutput).withFlex(1.1f));
     fbMiddle.items.add(fi(fbGraphy).withFlex(3.f));
     fbMain.items.add(fi(fbLorenz).withFlex(1.f));
-    fbMain.items.add(fi(fbMiddle).withFlex(2.f));
+    fbMain.items.add(fi(fbMiddle).withFlex(2.1f));
 
     fbMain.performLayout(bounds);
 }
