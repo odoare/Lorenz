@@ -81,3 +81,7 @@ This creates a dynamic feedback loop where the plugin is constantly trying to gu
 5.  **Shape the Dynamics:** Use the `ATTACK`, `DECAY`, `SUSTAIN`, and `RELEASE` knobs to shape the sound's volume envelope.
 6.  **Modulate:** Use the `Mod Target` and `Mod Amount` controls to assign MIDI CC01 (Mod Wheel) to modulate one of the core attractor parameters for expressive, real-time control.
 7.  **Reset:** If the sound becomes silent or stuck (which can happen with chaotic systems!), press the **Reset Oscillator** button to restart the simulation from its initial state.
+
+## Contact
+
+olivier.doare@ensta.fr
