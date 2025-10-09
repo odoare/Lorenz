@@ -59,6 +59,8 @@ LorenzAudioProcessor::LorenzAudioProcessor()
 #endif
 {
     dtTarget = timestepParam->load();
+    factoryPresets = FactoryPresets::getAvailablePresets();
+    apvts.addParameterListener("MOD_TARGET", this); // Example, can add more if needed
 }
 
 
@@ -102,26 +104,70 @@ double LorenzAudioProcessor::getTailLengthSeconds() const
 
 int LorenzAudioProcessor::getNumPrograms()
 {
-    return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
+    // Return number of factory presets, or 1 if there are none.
+    return factoryPresets.size() + 1;
 }
 
 int LorenzAudioProcessor::getCurrentProgram()
 {
-    return 0;
+    return currentProgram;
 }
 
 void LorenzAudioProcessor::setCurrentProgram (int index)
 {
+    if (! juce::isPositiveAndBelow (index, getNumPrograms()))
+        return;
+
+    // If the host is in the process of loading a state, it might call
+    // setCurrentProgram immediately after setStateInformation. We want to
+    // ignore this call to prevent overwriting the just-loaded user state
+    // with a factory preset. We reset the flag after checking it.
+    if (std::exchange(isHostLoadingState, false))
+        return;
+
+    // Prevent parameterChanged from firing while we load.
+    juce::ScopedValueSetter<bool> loading (isLoadingPreset, true);
+
+    currentProgram = index;
+
+    // If it's a factory preset, get its data and pass it to setStateInformation.
+    if (juce::isPositiveAndBelow(index, factoryPresets.size()))
+    {
+        // 1. Get the raw XML data for the factory preset.
+        const auto& preset = factoryPresets.getReference(index);
+        auto xml = juce::XmlDocument::parse(juce::String::fromUTF8(preset.data, preset.dataSize));
+ 
+        if (xml != nullptr)
+        {
+            // 2. Directly replace the APVTS state.
+            // This will trigger parameterChanged for all parameters, so our `isLoadingPreset` flag is crucial.
+            apvts.replaceState(juce::ValueTree::fromXml(*xml));
+        }
+
+        // After loading a factory preset, we must notify the host that the state has changed.
+        // This prompts it to call getStateInformation() and update its own UI/state.
+        updateHostDisplay();
+    }
+    // If the index is for the "User Preset", we do nothing, as its state
+    // is managed by the host and has already been loaded via setStateInformation.
+    else
+    { }
 }
 
 const juce::String LorenzAudioProcessor::getProgramName (int index)
 {
+    if (juce::isPositiveAndBelow (index, factoryPresets.size()))
+        return factoryPresets.getUnchecked(index).name;
+
+    if (index == factoryPresets.size())
+        return "User Preset";
+
     return {};
 }
 
 void LorenzAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
+    // You could implement user-renamable presets here if desired.
 }
 
 //==============================================================================
@@ -547,29 +593,59 @@ void LorenzAudioProcessor::saveStateToFile()
 //==============================================================================
 void LorenzAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // The AudioProcessorValueTreeState makes this easy by creating an XML representation of its state.
     auto state = apvts.copyState();
     std::unique_ptr<juce::XmlElement> xml (state.createXml());
+
+    // CRITICAL FIX: Any state saved by the host is a "user" state. We must
+    // always save the index of the "User Preset" slot, not the currently
+    // active program index (which could be a factory preset).
+    xml->setAttribute ("currentProgram", factoryPresets.size());
     copyXmlToBinary (*xml, destData);
 }
 
 void LorenzAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    // This function handles loading state from the host (e.g., user presets).
     std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
 
-    if (xmlState.get() != nullptr)
+    if (xmlState != nullptr && xmlState->hasTagName(apvts.state.getType()))
     {
-        if (xmlState->hasTagName (apvts.state.getType()))
-        {
-            apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
-            // This is useful for creating new factory presets.
-            std::cout << (apvts.copyState().createXml()->toString()) << std::endl;
-        }
+        auto tree = juce::ValueTree::fromXml (*xmlState);
+        // This is loading a user preset or the host's saved state.
+        // We must prevent parameterChanged from setting currentProgram to "User" while we are loading.
+        juce::ScopedValueSetter<bool> loading (isLoadingPreset, true);
+
+        // Set a flag to indicate that the host is loading state. This helps us
+        // ignore a potential redundant call to setCurrentProgram that some hosts make.
+        isHostLoadingState = true;
+
+        // The saved state might have a program index, but when the host loads state,
+        // it's always considered the "User" program.
+        currentProgram = tree.getProperty("currentProgram", factoryPresets.size());
+        apvts.replaceState (tree);
     }
 }
+
+void LorenzAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
+{
+    // Any parameter change makes the preset "dirty" (a user preset).
+    // We check the isLoadingPreset flag to avoid this when loading a preset.
+    if (!isLoadingPreset)
+    {
+        // If we were on a factory preset, any change moves us to the "User Preset" slot.
+        if (currentProgram != factoryPresets.size())
+            currentProgram = factoryPresets.size();
+    }
+}
+
+// void LorenzAudioProcessor::apvtsChanged()
+// {
+//     // This is a central place to react to any state change, whether from the host or a factory preset.
+//     // We must always update the audio engine after parameters have changed.
+//     lorenzOsc.updateParameters();
+//     updateHostDisplay();
+// }
+
 
 //==============================================================================
 // This creates new instances of the plugin..

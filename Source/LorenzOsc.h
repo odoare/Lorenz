@@ -29,8 +29,9 @@ public:
     void setParameters(const std::atomic<float>* newSigma, const std::atomic<float>* newRho, const std::atomic<float>* newBeta,
                        const std::atomic<float>* newMx, const std::atomic<float>* newMy, const std::atomic<float>* newMz, //
                        const std::atomic<float>* newCx, const std::atomic<float>* newCy, const std::atomic<float>* newCz, //
-                       const std::atomic<float>* newTaming);
+                       const std::atomic<float>* newTaming); //
     void setTimestep(const std::atomic<float>* newDt);
+    void updateParameters();
     void setRampLength(double rampLengthSeconds);
 
 private:

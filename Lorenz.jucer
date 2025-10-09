@@ -5,7 +5,15 @@
               pluginFormats="buildStandalone,buildVST,buildVST3" pluginManufacturerCode="FXME"
               pluginCode="LORZ">
   <MAINGROUP id="udRHH5" name="Lorenz">
+    <GROUP id="{238A69A0-1600-E1B5-5106-006FF59AC2BF}" name="Presets">
+      <FILE id="qRyR8K" name="LowMach.xml" compile="0" resource="1" file="Presets/LowMach.xml"/>
+      <FILE id="owb1AH" name="PeriodDoubling.xml" compile="0" resource="1"
+            file="Presets/PeriodDoubling.xml"/>
+      <FILE id="j0ltWD" name="VBoat.xml" compile="0" resource="1" file="Presets/VBoat.xml"/>
+    </GROUP>
     <GROUP id="{F7CFE534-78AE-F962-5711-EFB010126FC2}" name="Source">
+      <FILE id="H9Bane" name="FactoryPresets.h" compile="0" resource="0"
+            file="Source/FactoryPresets.h"/>
       <FILE id="pQtrTO" name="AttractorComponent.h" compile="0" resource="0"
             file="Source/AttractorComponent.h"/>
       <FILE id="dVmPgp" name="PluginProcessor.cpp" compile="1" resource="0"

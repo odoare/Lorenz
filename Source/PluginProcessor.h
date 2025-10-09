@@ -10,13 +10,15 @@
 
 #include <JuceHeader.h>
 #include "LorenzOsc.h"
+#include "FactoryPresets.h"
 
 #define PITCHBUFFERSIZE 4096
 
 //==============================================================================
 /**
 */
-class LorenzAudioProcessor  : public juce::AudioProcessor
+class LorenzAudioProcessor  : public juce::AudioProcessor,
+                               public juce::AudioProcessorValueTreeState::Listener
 {
 public:
     //==============================================================================
@@ -84,6 +86,8 @@ public:
 
     float getPitch() const;
 
+    void parameterChanged (const juce::String& parameterID, float newValue) override;
+
 private:
     void pushPointToFifo(const Point& p)
     {
@@ -102,6 +106,8 @@ private:
     static constexpr int fifoSize = 2048;
     juce::AbstractFifo pointFifo { fifoSize };
     std::vector<Point> pointBuffer { fifoSize };
+
+    juce::Array<FactoryPresets::Preset> factoryPresets;
 
     LorenzOsc lorenzOsc;
     std::atomic<bool> resetRequested { false };
@@ -184,6 +190,11 @@ private:
     juce::Array<float> hpf_prevInput;
     juce::Array<float> hpf_prevOutput;
     double processSampleRate = 44100.0;
+
+    int currentProgram = 0;
+    bool isInitialPresetLoaded = false;
+    bool isLoadingPreset = false;
+    bool isHostLoadingState = false;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LorenzAudioProcessor)

@@ -67,6 +67,23 @@ void LorenzOsc::setTimestep(const std::atomic<float>* newDt)
     dtParam = newDt;
 }
 
+void LorenzOsc::updateParameters()
+{
+    // This function forces an immediate update of all smoothed parameters,
+    // bypassing the ramp. This is crucial when loading a new state.
+    if (sigmaParam) sigma.setCurrentAndTargetValue(sigmaParam->load());
+    if (rhoParam)   rho.setCurrentAndTargetValue(rhoParam->load());
+    if (betaParam)  beta.setCurrentAndTargetValue(betaParam->load());
+    if (mxParam)    mx.setCurrentAndTargetValue(mxParam->load());
+    if (myParam)    my.setCurrentAndTargetValue(myParam->load());
+    if (mzParam)    mz.setCurrentAndTargetValue(mzParam->load());
+    if (cxParam)    cx.setCurrentAndTargetValue(cxParam->load());
+    if (cyParam)    cy.setCurrentAndTargetValue(cyParam->load());
+    if (czParam)    cz.setCurrentAndTargetValue(czParam->load());
+    if (tamingParam) taming.setCurrentAndTargetValue(tamingParam->load());
+    if (dtParam)    dt.setCurrentAndTargetValue(dtParam->load());
+}
+
 void LorenzOsc::setRampLength(double rampLengthSeconds)
 {
     this->rampDurationSeconds = rampLengthSeconds; // 'this->' is good practice here to prevent shadowing
