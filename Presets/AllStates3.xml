@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Parameters currentProgram="4">
+  <PARAM id="ATTACK" value="1.098000049591064"/>
+  <PARAM id="BETA" value="6.96999979019165"/>
+  <PARAM id="CX" value="2.0"/>
+  <PARAM id="CY" value="0.8200000524520874"/>
+  <PARAM id="CZ" value="1.095000028610229"/>
+  <PARAM id="DECAY" value="0.1000000014901161"/>
+  <PARAM id="KD" value="0.00002690786095627118"/>
+  <PARAM id="KI" value="3.105214307908e-9"/>
+  <PARAM id="KP" value="4.662703304347815e-6"/>
+  <PARAM id="LEVEL_X" value="-10.0"/>
+  <PARAM id="LEVEL_Y" value="-10.0"/>
+  <PARAM id="LEVEL_Z" value="6.0"/>
+  <PARAM id="MOD_AMOUNT" value="-0.6200000047683716"/>
+  <PARAM id="MOD_TARGET" value="3.0"/>
+  <PARAM id="MX" value="0.01000000070780516"/>
+  <PARAM id="MY" value="0.009000000543892384"/>
+  <PARAM id="MZ" value="0.0130000002682209"/>
+  <PARAM id="OUTPUT_LEVEL" value="0.0"/>
+  <PARAM id="PAN_X" value="-0.5"/>
+  <PARAM id="PAN_Y" value="0.5"/>
+  <PARAM id="PAN_Z" value="0.0"/>
+  <PARAM id="PITCH_SOURCE" value="0.0"/>
+  <PARAM id="RELEASE" value="1.546000123023987"/>
+  <PARAM id="RHO" value="28.0"/>
+  <PARAM id="SIGMA" value="10.0"/>
+  <PARAM id="SUSTAIN" value="0.7999999523162842"/>
+  <PARAM id="TAMING" value="2.71315116151527e-6"/>
+  <PARAM id="TARGET_FREQ" value="98.0"/>
+  <PARAM id="TIMESTEP" value="0.002760000061243773"/>
+  <PARAM id="VIEW_ZOOM_X" value="83.5"/>
+  <PARAM id="VIEW_ZOOM_Y" value="97.59999847412109"/>
+  <PARAM id="VIEW_ZOOM_Z" value="85.80000305175781"/>
+</Parameters>
