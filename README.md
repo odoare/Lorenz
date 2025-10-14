@@ -1,4 +1,4 @@
-# Lorenz, the the Lorenz ottractor instrument
+# Lorenz, the the Lorenz attractor instrument
 
 Lorenz is a unique software synthesizer plugin that generates sound by simulating a modified version of the Lorenz attractor, a classic example of a chaotic system. Instead of using traditional oscillators, it uses the evolving state of the attractor to create complex, ever-changing, and organic sounds.
 
