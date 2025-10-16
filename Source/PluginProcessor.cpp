@@ -785,24 +785,33 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
 
 
     // --- Mixer Parameters ---
+    auto dbStringFromValue = [](float value, int)
+    {
+        return juce::String(value, 1) + " dB";
+    };
+
     layout.add(std::make_unique<juce::AudioParameterFloat>("LEVEL_X", "Level X",
-                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), 0.0f));
+                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), 0.0f, "dB",
+                                                           juce::AudioProcessorParameter::genericParameter, dbStringFromValue));
     layout.add(std::make_unique<juce::AudioParameterFloat>("PAN_X", "Pan X",
                                                            juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), -0.5f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("LEVEL_Y", "Level Y",
-                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), -60.0f));
+                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), -60.0f, "dB",
+                                                           juce::AudioProcessorParameter::genericParameter, dbStringFromValue));
     layout.add(std::make_unique<juce::AudioParameterFloat>("PAN_Y", "Pan Y",
                                                            juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 0.5f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("LEVEL_Z", "Level Z",
-                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), -60.0f));
+                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), -60.0f, "dB",
+                                                           juce::AudioProcessorParameter::genericParameter, dbStringFromValue));
     layout.add(std::make_unique<juce::AudioParameterFloat>("PAN_Z", "Pan Z",
                                                            juce::NormalisableRange<float>(-1.0f, 1.0f, 0.01f), 0.0f));
 
     // --- Output Parameters ---
     layout.add(std::make_unique<juce::AudioParameterFloat>("OUTPUT_LEVEL", "Output Level",
-                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), 0.0f));
+                                                           juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f), 0.0f, "dB",
+                                                           juce::AudioProcessorParameter::genericParameter, dbStringFromValue));
 
     // --- View Parameters ---
     layout.add(std::make_unique<juce::AudioParameterFloat>("VIEW_ZOOM_X", "View Zoom X",

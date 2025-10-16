@@ -15,49 +15,33 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
 {
     auto& apvts = audioProcessor.apvts;
 
-    addAndMakeVisible(sigmaKnob);
-    sigmaKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    sigmaKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(rhoKnob);
-    rhoKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    rhoKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(betaKnob);
-    betaKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    betaKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(timestepKnob);
-    timestepKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    timestepKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    // Group all knobs for easier initialization
+    const std::vector<fxme::FxmeKnob*> knobs = {
+        &sigmaKnob, &rhoKnob, &betaKnob, &timestepKnob,
+        &targetFrequencyKnob, &kpKnob, &kiKnob, &kdKnob,
+        &attackKnob, &decayKnob, &sustainKnob, &releaseKnob,
+        &modAmountKnob,
+        &levelXKnob, &panXKnob,
+        &levelYKnob, &panYKnob,
+        &levelZKnob, &panZKnob,
+        &outputLevelKnob,
+        &mxKnob, &myKnob, &mzKnob,
+        &cxKnob, &cyKnob, &czKnob,
+        &tamingKnob
+    };
 
-    addAndMakeVisible(targetFrequencyKnob);
-    targetFrequencyKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    targetFrequencyKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    for (auto* knob : knobs)
+    {
+        addAndMakeVisible(knob);
+        knob->slider.setLookAndFeel(&fxmeLookAndFeel);
+    }
 
-    addAndMakeVisible(kpKnob);
-    kpKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    kpKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(kiKnob);
-    kiKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    kiKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(kdKnob);
-    kdKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    kdKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    // Set bipolar knobs to draw from the center
+    modAmountKnob.slider.getProperties().set ("drawFromCentre", true);
+    panXKnob.slider.getProperties().set ("drawFromCentre", true);
+    panYKnob.slider.getProperties().set ("drawFromCentre", true);
+    panZKnob.slider.getProperties().set ("drawFromCentre", true);
 
-    addAndMakeVisible(attackKnob);
-    attackKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    attackKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(decayKnob);
-    decayKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    decayKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(sustainKnob);
-    sustainKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    sustainKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(releaseKnob);
-    releaseKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    releaseKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-
-    addAndMakeVisible(modAmountKnob);
-    modAmountKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    modAmountKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     addAndMakeVisible(modTargetSelector);
     if (auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("MOD_TARGET")))
         modTargetSelector.addItemList(choiceParam->choices, 1);
@@ -65,54 +49,6 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     addAndMakeVisible(modTargetLabel);
     modTargetLabel.setText("CC01 Mod Target", juce::dontSendNotification);
     modTargetLabel.setJustificationType(juce::Justification::centred);
-
-    addAndMakeVisible(levelXKnob);
-    levelXKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    levelXKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(panXKnob);
-    panXKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    panXKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-
-    addAndMakeVisible(levelYKnob);
-    levelYKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    levelYKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(panYKnob);
-    panYKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    panYKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-
-    addAndMakeVisible(levelZKnob);
-    levelZKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    levelZKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(panZKnob);
-    panZKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    panZKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    
-    addAndMakeVisible(outputLevelKnob);
-    outputLevelKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    outputLevelKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    
-    addAndMakeVisible(mxKnob);
-    mxKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    mxKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(myKnob);
-    myKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    myKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(mzKnob);
-    mzKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    mzKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(cxKnob);
-    cxKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    cxKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(cyKnob);
-    cyKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    cyKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(czKnob);
-    czKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    czKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-
-    addAndMakeVisible(tamingKnob);
-    tamingKnob.slider.setLookAndFeel(&fxmeLookAndFeel);
-    tamingKnob.slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
 
     addAndMakeVisible(attractorComponent);
 
@@ -177,7 +113,7 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
 
     startTimerHz(30); // Update the frequency display 30 times per second
 
-    setSize (820, 600);
+    setSize (720, 480);
 }
 
 LorenzAudioProcessorEditor::~LorenzAudioProcessorEditor()
