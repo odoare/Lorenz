@@ -42,13 +42,17 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     panYKnob.slider.getProperties().set ("drawFromCentre", true);
     panZKnob.slider.getProperties().set ("drawFromCentre", true);
 
+    
+
     addAndMakeVisible(modTargetSelector);
     if (auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("MOD_TARGET")))
         modTargetSelector.addItemList(choiceParam->choices, 1);
     modTargetAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "MOD_TARGET", modTargetSelector);
     addAndMakeVisible(modTargetLabel);
-    modTargetLabel.setText("CC01 Mod Target", juce::dontSendNotification);
+    modTargetLabel.setText("CC01 Target", juce::dontSendNotification);
     modTargetLabel.setJustificationType(juce::Justification::centred);
+    modTargetSelector.setColour(juce::ComboBox::backgroundColourId, juce::Colours::transparentBlack);
+    modTargetSelector.setColour(juce::ComboBox::outlineColourId, juce::Colours::transparentBlack);
 
     addAndMakeVisible(attractorComponent);
 
@@ -110,6 +114,10 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     pitchSourceLabel.setText("Pitch Source", juce::dontSendNotification);
     //pitchSourceLabel.attachToComponent(&pitchSourceSelector, true);
     pitchSourceLabel.setJustificationType(juce::Justification::centred);
+
+    pitchSourceSelector.setColour(juce::ComboBox::backgroundColourId, juce::Colours::transparentBlack);
+    pitchSourceSelector.setColour(juce::ComboBox::outlineColourId, juce::Colours::transparentBlack);
+   
 
     startTimerHz(30); // Update the frequency display 30 times per second
 
@@ -195,10 +203,15 @@ void LorenzAudioProcessorEditor::resized()
     fbLorenz.items.add(fi(fbL3).withFlex(1.f));
     fbLorenz.items.add(fi(fbL4).withFlex(1.f));
     fbLorenz.items.add(fi(fbL5).withFlex(1.f));
+    juce::FlexBox fbButtons;
+    fbButtons.flexDirection = juce::FlexBox::Direction::row;
+    fbButtons.items.add(fi(savePresetButton).withFlex(1.f).withMargin(juce::FlexItem::Margin(5, 10, 5, 10)));
+    fbButtons.items.add(fi(resetButton).withFlex(1.f).withMargin(juce::FlexItem::Margin(5, 10, 5, 10)));
+    fbLorenz.items.add(fi(fbButtons).withFlex(.45f));
     fbF1.items.add(fi(targetFrequencyKnob).withFlex(1.f));
     fbF1.items.add(fi(timestepKnob).withFlex(1.f));
     fbF11.items.add(fi(pitchSourceLabel).withFlex(1.f));
-    fbF11.items.add(fi(pitchSourceSelector).withFlex(1.f).withMargin(10).withMargin(juce::FlexItem::Margin(0,20,10,20)));
+    fbF11.items.add(fi(pitchSourceSelector).withFlex(1.f).withMargin(10).withMargin(juce::FlexItem::Margin(0,5,10,5)));
     fbF11.items.add(fi(measuredFrequencyLabel).withFlex(1.f));
     fbF1.items.add(fi(fbF11).withFlex(1.f));
     fbF1.items.add(fi(kpKnob).withFlex(1.f));
@@ -209,19 +222,15 @@ void LorenzAudioProcessorEditor::resized()
     fbAdsr.items.add(fi(sustainKnob).withFlex(1.f));
     fbAdsr.items.add(fi(releaseKnob).withFlex(1.f));
     fbMod.items.add(fi(modTargetLabel).withFlex(1.f));
-    fbMod.items.add(fi(modTargetSelector).withFlex(1.f).withMargin(juce::FlexItem::Margin(0, 0, 10, 0)));
+    fbMod.items.add(fi(modTargetSelector).withFlex(1.f).withMargin(juce::FlexItem::Margin(0, 0, 0, 0)));
     fbMod.items.add(fi(modAmountKnob).withFlex(2.f));
 
-    juce::FlexBox fbButtons;
-    fbButtons.flexDirection = juce::FlexBox::Direction::column;
-    fbButtons.items.add(fi(savePresetButton).withFlex(1.f).withMargin(juce::FlexItem::Margin(5, 10, 5, 10)));
-    fbButtons.items.add(fi(resetButton).withFlex(1.f).withMargin(juce::FlexItem::Margin(5, 10, 5, 10)));
 
     fbOutput.items.add(fi(fbAdsr).withFlex(4.f).withMargin(juce::FlexItem::Margin(20,0,10,0)));
     fbOutput.items.add(fi(fbMod).withFlex(1.5f).withMargin(juce::FlexItem::Margin(0, 0, 0, 20)));
     fbOutput.items.add(fi(outputLevelKnob).withFlex(1.5f).withMargin(juce::FlexItem::Margin(10,0,10,10)));
     fbOutput.items.add(fi(tamingKnob).withFlex(1.5f).withMargin(juce::FlexItem::Margin(10,0,10,10)));
-    fbOutput.items.add(fi(fbButtons).withFlex(1.5f).withMargin(juce::FlexItem::Margin(20, 0, 20, 0)));
+    // fbOutput.items.add(fi(fbButtons).withFlex(1.5f).withMargin(juce::FlexItem::Margin(20, 0, 20, 0)));
     fbGraphx.items.add(fi(attractorComponent).withFlex(1.f));
     fbGraphx.items.add(fi(viewZoomZSlider).withFlex(.05f));
     fbGraphx.items.add(fi(viewZoomYSlider).withFlex(.05f));

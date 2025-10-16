@@ -745,7 +745,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
 
     // --- Modulation Parameters ---
     layout.add(std::make_unique<juce::AudioParameterChoice>("MOD_TARGET", "Mod Target",
-                                                            juce::StringArray{ "Off", "Sigma", "Rho", "Beta", "Mass X", "Mass Y", "Mass Z", "Damp X", "Damp Y", "Damp Z", "Taming" },
+                                                            juce::StringArray{ "Off", "Sigma", "Rho", "Beta", "Mx", "My", "Mz", "Cx", "Cy", "Cy", "Taming" },
                                                             0));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("MOD_AMOUNT", "Mod Amount",

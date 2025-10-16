@@ -58,7 +58,7 @@ private:
     juce::ComboBox modTargetSelector;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> modTargetAttachment;
     juce::Label modTargetLabel;
-    fxme::FxmeKnob modAmountKnob{audioProcessor.apvts, "MOD_AMOUNT", "Amount", juce::Colours::magenta};
+    fxme::FxmeKnob modAmountKnob{audioProcessor.apvts, "MOD_AMOUNT", "", juce::Colours::magenta};
 
     // X Mixer Knobs
     fxme::FxmeKnob levelXKnob{audioProcessor.apvts, "LEVEL_X", "Level X", juce::Colours::red.brighter(0.7f)},
