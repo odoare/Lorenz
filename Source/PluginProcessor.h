@@ -103,7 +103,7 @@ private:
         // This is better than corrupting the FIFO state.
     }
 
-    static constexpr int fifoSize = 2048;
+    static constexpr int fifoSize = 512;
     juce::AbstractFifo pointFifo { fifoSize };
     std::vector<Point> pointBuffer { fifoSize };
 
@@ -115,7 +115,7 @@ private:
     // For controlling the rate of points sent to the GUI
     int samplesUntilNextPoint = 0;
     int pointGenerationInterval = 0;
-    static constexpr int pointsPerSecond = 8000;
+    static constexpr int pointsPerSecond = 11025;
 
     // Cached parameter pointers
     std::atomic<float>* sigmaParam = nullptr;

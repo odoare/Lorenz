@@ -214,7 +214,7 @@ void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     hpf_prevOutput.resize(getTotalNumOutputChannels());
     processSampleRate = sampleRate;
 
-    // Prepare smoothed values with a ramp length (e.g., 50ms)
+    // Prepare smoothed values with a ramp length
     const double rampTimeSeconds = 0.05;
     smoothedLevelX.reset (sampleRate, rampTimeSeconds);
     smoothedPanX.reset (sampleRate, rampTimeSeconds);
