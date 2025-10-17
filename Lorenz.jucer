@@ -10,6 +10,9 @@
       <FILE id="H2FfUB" name="AllStates2.xml" compile="0" resource="1" file="Presets/AllStates2.xml"/>
       <FILE id="MdjxGr" name="AllStates3.xml" compile="0" resource="1" file="Presets/AllStates3.xml"/>
       <FILE id="qRyR8K" name="LowMach.xml" compile="0" resource="1" file="Presets/LowMach.xml"/>
+      <FILE id="dONz4r" name="ManyStates+Vib.xml" compile="0" resource="1"
+            file="Presets/ManyStates+Vib.xml"/>
+      <FILE id="DPdvEs" name="ManyStates.xml" compile="0" resource="1" file="Presets/ManyStates.xml"/>
       <FILE id="owb1AH" name="PeriodDoubling.xml" compile="0" resource="1"
             file="Presets/PeriodDoubling.xml"/>
       <FILE id="HI5n2Y" name="Pipe1.xml" compile="0" resource="1" file="Presets/Pipe1.xml"/>
