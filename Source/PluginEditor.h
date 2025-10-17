@@ -10,7 +10,7 @@
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
-#include "AttractorComponent.h"
+#include "AttractorComponent3D.h"
 
 //==============================================================================
 /**
@@ -87,7 +87,7 @@ private:
     // Taming Knob
     fxme::FxmeKnob tamingKnob{audioProcessor.apvts, "TAMING", "Taming", juce::Colours::purple};
 
-    AttractorComponent attractorComponent{audioProcessor};
+    AttractorComponent3D attractorComponent{audioProcessor};
 
     juce::Slider viewZoomXSlider, viewZoomZSlider, viewZoomYSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> viewZoomXAttachment, viewZoomZAttachment, viewZoomYAttachment;
