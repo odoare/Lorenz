@@ -22,6 +22,9 @@
       <FILE id="j0ltWD" name="VBoat.xml" compile="0" resource="1" file="Presets/VBoat.xml"/>
     </GROUP>
     <GROUP id="{F7CFE534-78AE-F962-5711-EFB010126FC2}" name="Source">
+      <FILE id="GerVk9" name="PIDController.cpp" compile="1" resource="0"
+            file="Source/PIDController.cpp"/>
+      <FILE id="MNuLaq" name="PIDController.h" compile="0" resource="0" file="Source/PIDController.h"/>
       <FILE id="Kr9Q6S" name="AttractorComponent3D.h" compile="0" resource="0"
             file="Source/AttractorComponent3D.h"/>
       <FILE id="H9Bane" name="FactoryPresets.h" compile="0" resource="0"

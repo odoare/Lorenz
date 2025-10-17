@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "LorenzOsc.h"
+#include "PIDController.h"
 #include "FactoryPresets.h"
 
 #define PITCHBUFFERSIZE 4096
@@ -172,15 +173,9 @@ private:
     adamski::PitchMPM pitchDetector;
     std::atomic<float> measuredFrequency { 0.0f };
 
-    int nPitchBuffers, pitchBufferSize, bufferSize;
-    float sampleRate;
-
-    // PI Controller for dt
-    float dtIntegral = 0.0f;
-    float dtProportional = 0.0f;
-    float dtDerivative = 0.0f;
+    // --- PID Controller for Timestep ---
+    PIDController pidController;
     float dtTarget = 0.001f; // The value we are driving dt towards
-    float lastError = 0.0f;
 
     // Buffer for frequency analysis
     juce::AudioBuffer<float> analysisBuffer;

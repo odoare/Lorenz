@@ -201,10 +201,7 @@ void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     pointGenerationInterval = static_cast<int>(sampleRate / pointsPerSecond);
 
     // Prepare frequency detector
-    nPitchBuffers = PITCHBUFFERSIZE/samplesPerBlock;
-    pitchBufferSize = nPitchBuffers*samplesPerBlock;
-    bufferSize = samplesPerBlock;
-
+    const int pitchBufferSize = PITCHBUFFERSIZE;
     pitchDetector.setBufferSize (pitchBufferSize);
     pitchDetector.setSampleRate (sampleRate);
     analysisBuffer.setSize(1, pitchBufferSize);
@@ -213,6 +210,9 @@ void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     hpf_prevInput.resize(getTotalNumOutputChannels());
     hpf_prevOutput.resize(getTotalNumOutputChannels());
     processSampleRate = sampleRate;
+
+    // Prepare PID controller
+    pidController.setIntegralLimits(-0.001f, 0.001f);
 
     // Prepare smoothed values with a ramp length
     const double rampTimeSeconds = 0.05;
@@ -395,13 +395,10 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     if (resetRequested.exchange(false))
     {
         lorenzOsc.reset();
-        // Also reset the PI controller state
-        dtIntegral = 0.0f;
-        dtProportional = 0.0f;
+        pidController.reset();
         // Reset dtTarget to the current slider value, not the last controlled value
         dtTarget = apvts.getParameter("TIMESTEP")->getValue() * (0.01f - 0.0001f) + 0.0001f;
         *timestepParam = dtTarget;
-        lastError = 0.0f;
         measuredFrequency = 0.0f;
         // Reset the high-pass filter's state
         for (int i = 0; i < hpf_prevInput.size(); ++i) hpf_prevInput.set(i, 0.0f);
@@ -412,8 +409,6 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     }
 
     // Load parameter values.
-    // The level parameters were not being loaded from the APVTS correctly.
-    // Let's load them now.
     const float levelX = juce::Decibels::decibelsToGain(apvts.getRawParameterValue("LEVEL_X")->load());
     const float panX = panXParam->load();
     const float levelY = juce::Decibels::decibelsToGain(apvts.getRawParameterValue("LEVEL_Y")->load());
@@ -431,8 +426,8 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     smoothedLevelZ.setTargetValue (levelZ);
     smoothedPanZ.setTargetValue (panZ);
     smoothedOutputLevel.setTargetValue (outputLevel);
+    
     // The state variables can have a large range, so we scale them down.
-    // These are empirical values, you may want to adjust them.
     const float xScale = 0.025f;
     const float yScale = 0.025f;
     const float zScale = 0.0125f;
@@ -558,24 +553,13 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     // and the ADSR is not in its idle state.
     if (targetFrequency > 0.0f && ampAdsr.isActive())
     {
-        const float currentError = targetFrequency - measuredFrequency.load();
+        // Update PID gains
+        pidController.setGains(kpParam->load(), kiParam->load(), kdParam->load());
 
-        // Proportional term
-        const float Kp = kpParam->load();
-        dtProportional = currentError;
+        // Calculate control adjustment
+        const float adjustment = pidController.process(targetFrequency, measuredFrequency.load());
 
-        // Integral term
-        const float Ki = kiParam->load();
-        dtIntegral += currentError * Ki;
-        dtIntegral = juce::jlimit(-0.001f, 0.001f, dtIntegral); // Clamp integral term to prevent wind-up
-
-        // Derivative term
-        const float Kd = kdParam->load();
-        dtDerivative = currentError - lastError;
-        lastError = currentError;
-
-        // Update target dt
-        dtTarget += (dtProportional * Kp) + dtIntegral + (dtDerivative * Kd);
+        dtTarget += adjustment;
         dtTarget = timestepRangedParam->getNormalisableRange().snapToLegalValue(dtTarget); // Clamp to the parameter's full legal range
 
         // Convert the real-world value back to a normalized value (0.0 - 1.0)
