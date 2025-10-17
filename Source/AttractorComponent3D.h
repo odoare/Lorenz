@@ -38,7 +38,6 @@ private:
         // y' = x*M(0,1) + y*M(1,1) + z*M(2,1) + w*M(3,1)  (2nd column of M)
         // etc.
 
-        //const float* m = *matrix; // Get a pointer to the flat array of 16 values
         const float newX = x * matrix.mat[0] + y * matrix.mat[4] + z * matrix.mat[8]  + w * matrix.mat[12];
         const float newY = x * matrix.mat[1] + y * matrix.mat[5] + z * matrix.mat[9]  + w * matrix.mat[13];
         const float newZ = x * matrix.mat[2] + y * matrix.mat[6] + z * matrix.mat[10] + w * matrix.mat[14];
@@ -60,6 +59,28 @@ public:
     {
         pointsXYZ.reserve(maxPathPoints);
         // Start the timer to update the display. 50Hz is a good rate for smooth animation
+
+        addAndMakeVisible(xyViewButton);
+        xyViewButton.setButtonText("XY");
+        xyViewButton.onClick = [this] { rotationX = 0.0f; rotationY = 0.0f; repaint(); };
+
+        addAndMakeVisible(xzViewButton);
+        xzViewButton.setButtonText("XZ");
+        xzViewButton.onClick = [this] { rotationX = juce::MathConstants<float>::pi / 2.0f; rotationY = 0.0f; repaint(); };
+
+        addAndMakeVisible(yzViewButton);
+        yzViewButton.setButtonText("YZ");
+        yzViewButton.onClick = [this] { rotationX = juce::MathConstants<float>::pi / 2.0f; rotationY = juce::MathConstants<float>::pi / 2.0f; repaint(); };
+
+        addAndMakeVisible(isoViewButton);
+        isoViewButton.setButtonText("3D");
+        isoViewButton.onClick = [this] { rotationX = 0.615f; rotationY = -0.785f; repaint(); }; // ~35.26 deg, -45 deg
+
+        xyViewButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey.withAlpha(0.5f));
+        xzViewButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey.withAlpha(0.5f));
+        yzViewButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey.withAlpha(0.5f));
+        isoViewButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey.withAlpha(0.5f));
+
         startTimerHz(50);
     }
 
@@ -190,6 +211,14 @@ public:
         // When the component is resized, we should clear the points
         // to force a full redraw in the new aspect ratio.
         pointsXYZ.clear();
+
+        const int buttonWidth = 40;
+        const int buttonHeight = 20;
+        const int margin = 4;
+        xyViewButton.setBounds(margin, getHeight() - buttonHeight - margin, buttonWidth, buttonHeight);
+        xzViewButton.setBounds(margin + buttonWidth, getHeight() - buttonHeight - margin, buttonWidth, buttonHeight);
+        yzViewButton.setBounds(margin + 2 * buttonWidth, getHeight() - buttonHeight - margin, buttonWidth, buttonHeight);
+        isoViewButton.setBounds(margin + 3 * buttonWidth, getHeight() - buttonHeight - margin, buttonWidth, buttonHeight);
     }
 
     void mouseDrag(const juce::MouseEvent& event) override
@@ -236,6 +265,11 @@ private:
 
     float rotationX = 0.3f;
     float rotationY = 0.0f;
+
+    juce::TextButton xyViewButton;
+    juce::TextButton xzViewButton;
+    juce::TextButton yzViewButton;
+    juce::TextButton isoViewButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AttractorComponent3D)
 };
