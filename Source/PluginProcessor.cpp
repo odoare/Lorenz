@@ -143,6 +143,7 @@ void LorenzAudioProcessor::setCurrentProgram (int index)
             // This will trigger parameterChanged for all parameters, so our `isLoadingPreset` flag is crucial.
             apvts.replaceState(juce::ValueTree::fromXml(*xml));
         }
+        resetAudioEngineState();
 
         // After loading a factory preset, we must notify the host that the state has changed.
         // This prompts it to call getStateInformation() and update its own UI/state.
@@ -185,6 +186,27 @@ void LorenzAudioProcessor::resetSmoothedValues()
     lorenzOsc.updateParameters();
 }
 
+void LorenzAudioProcessor::resetAudioEngineState()
+{
+    // This function should be called whenever the sound-generating state
+    // needs to be completely reset, such as after loading a preset or
+    // when the user presses the reset button.
+    const juce::ScopedLock audioCallbackLock (getCallbackLock());
+
+    lorenzOsc.reset();
+    pidController.reset();
+
+    // Reset dtTarget to the current slider value, not the last controlled value
+    dtTarget = timestepRangedParam->getNormalisableRange().convertFrom0to1(timestepParam->load());
+    *timestepParam = dtTarget;
+    measuredFrequency = 0.0f;
+
+    // Reset the high-pass filter's state and the pitch analysis buffer
+    for (int i = 0; i < hpf_prevInput.size(); ++i) hpf_prevInput.set(i, 0.0f);
+    for (int i = 0; i < hpf_prevOutput.size(); ++i) hpf_prevOutput.set(i, 0.0f);
+    analysisBuffer.clear();
+    resetSmoothedValues();
+}
 //==============================================================================
 void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
@@ -395,18 +417,7 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     // --- Handle reset request ---
     if (resetRequested.exchange(false))
     {
-        lorenzOsc.reset();
-        pidController.reset();
-        // Reset dtTarget to the current slider value, not the last controlled value
-        dtTarget = apvts.getParameter("TIMESTEP")->getValue() * (0.01f - 0.0001f) + 0.0001f;
-        *timestepParam = dtTarget;
-        measuredFrequency = 0.0f;
-        // Reset the high-pass filter's state
-        for (int i = 0; i < hpf_prevInput.size(); ++i) hpf_prevInput.set(i, 0.0f);
-        for (int i = 0; i < hpf_prevOutput.size(); ++i) hpf_prevOutput.set(i, 0.0f);
-
-        analysisBuffer.clear();
-        resetSmoothedValues();
+        resetAudioEngineState();
     }
 
     // Load parameter values.
@@ -658,7 +669,7 @@ void LorenzAudioProcessor::setStateInformation (const void* data, int sizeInByte
         // it's always considered the "User" program.
         currentProgram = tree.getProperty("currentProgram", factoryPresets.size());
         apvts.replaceState (tree);
-        resetSmoothedValues();
+        resetAudioEngineState();
     }
 }
 

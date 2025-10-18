@@ -72,6 +72,8 @@ public:
     // Thread-safe FIFO for passing points to the GUI
     bool getPointFromFifo(Point& p)
     {
+        // This is a lock-free read, which is fine for this use case.
+
         int start1, size1, start2, size2;
         pointFifo.prepareToRead (1, start1, size1, start2, size2);
 
@@ -92,6 +94,8 @@ public:
 private:
     void pushPointToFifo(const Point& p)
     {
+        // This is a lock-free write.
+
         int start1, size1, start2, size2;
         pointFifo.prepareToWrite(1, start1, size1, start2, size2);
 
@@ -201,6 +205,7 @@ private:
     juce::SmoothedValue<float> smoothedOutputLevel;
 
     void resetSmoothedValues();
+    void resetAudioEngineState();
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LorenzAudioProcessor)
