@@ -161,7 +161,7 @@ public:
             const float brightness = juce::jmap(p1.z, -0.5f, 0.5f, 0.4f, 1.0f);
             const float thickness = juce::jmap(p1.z, -0.5f, 0.5f, 1.0f, 2.5f);
 
-            g.setColour(juce::Colours::green.brighter().withAlpha(brightness));
+            g.setColour(juce::Colours::cyan.brighter().withAlpha(brightness));
             g.drawLine(path.getCurrentPosition().x, path.getCurrentPosition().y, projectedX1, projectedY1, thickness);
             path.lineTo(projectedX1, projectedY1);
         }

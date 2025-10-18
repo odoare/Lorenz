@@ -57,7 +57,7 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     addAndMakeVisible(attractorComponent);
 
     addAndMakeVisible(viewZoomXSlider);
-    viewZoomXSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    viewZoomXSlider.setSliderStyle(juce::Slider::LinearVertical);
     viewZoomXSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     viewZoomXAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "VIEW_ZOOM_X", viewZoomXSlider);
 
@@ -233,15 +233,15 @@ void LorenzAudioProcessorEditor::resized()
     fbOutput.items.add(fi(tamingKnob).withFlex(1.5f).withMargin(juce::FlexItem::Margin(10,0,10,10)));
     // fbOutput.items.add(fi(fbButtons).withFlex(1.5f).withMargin(juce::FlexItem::Margin(20, 0, 20, 0)));
     fbGraphx.items.add(fi(attractorComponent).withFlex(1.f));
-    fbGraphx.items.add(fi(viewZoomZSlider).withFlex(.05f));
+    fbGraphx.items.add(fi(viewZoomXSlider).withFlex(.05f));
     fbGraphx.items.add(fi(viewZoomYSlider).withFlex(.05f));
-    fbGraphx2.items.add(fi(viewZoomXLabel).withFlex(.05f));
-    fbGraphx2.items.add(fi(viewZoomXLabel).withFlex(.05f));
-    fbGraphx2.items.add(fi(viewZoomXSlider).withFlex(.95f));
-    fbGraphx2.items.add(fi(viewZoomYLabel).withFlex(.05f));
-    fbGraphx2.items.add(fi(viewZoomZLabel).withFlex(.05f));
-    fbGraphy.items.add(fi(fbGraphx).withFlex(1.f));
-    fbGraphy.items.add(fi(fbGraphx2).withFlex(.1f));
+    fbGraphx.items.add(fi(viewZoomZSlider).withFlex(.05f));
+    // fbGraphx2.items.add(fi(viewZoomXLabel).withFlex(.05f));
+    // fbGraphx2.items.add(fi(viewZoomXLabel).withFlex(.05f));
+    // fbGraphx2.items.add(fi(viewZoomYLabel).withFlex(.05f));
+    // fbGraphx2.items.add(fi(viewZoomZLabel).withFlex(.05f));
+    fbGraphy.items.add(fi(fbGraphx).withFlex(1.f).withMargin(juce::FlexItem::Margin(0,0,10,0)));
+    // fbGraphy.items.add(fi(fbGraphx2).withFlex(.1f));
     fbMiddle.items.add(fi(fbF1).withFlex(.9f));
     fbMiddle.items.add(fi(fbOutput).withFlex(1.1f));
     fbMiddle.items.add(fi(fbGraphy).withFlex(3.f));
