@@ -7,8 +7,8 @@
   <PARAM id="CY" value="1.0"/>
   <PARAM id="CZ" value="2.0"/>
   <PARAM id="DECAY" value="0.1000000014901161"/>
-  <PARAM id="KD" value="0.00002690786095627118"/>
-  <PARAM id="KI" value="3.105214307908e-9"/>
+  <PARAM id="KD" value="2e-7"/>
+  <PARAM id="KI" value="6e-8"/>
   <PARAM id="KP" value="4.662703304347815e-6"/>
   <PARAM id="LEVEL_X" value="-10.39999771118164"/>
   <PARAM id="LEVEL_Y" value="-7.700000762939453"/>
