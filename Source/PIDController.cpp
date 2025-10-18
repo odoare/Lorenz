@@ -23,19 +23,23 @@ void PIDController::setIntegralLimits(float min, float max)
     maxIntegral = max;
 }
 
-float PIDController::process(float targetValue, float currentValue)
+float PIDController::process(float targetValue, float currentValue, float dt)
 {
+    if (dt <= 0.0f)
+        return 0.0f;
+
     const float error = targetValue - currentValue;
 
     // Proportional term
     const float proportionalTerm = error * kp;
 
     // Integral term with anti-windup
-    integral += error * ki;
+    integral += error * ki * dt;
     integral = juce::jlimit(minIntegral, maxIntegral, integral);
 
     // Derivative term
-    const float derivativeTerm = (error - lastError) * kd;
+    const float derivative = (error - lastError) / dt;
+    const float derivativeTerm = derivative * kd;
     lastError = error;
 
     return proportionalTerm + integral + derivativeTerm;

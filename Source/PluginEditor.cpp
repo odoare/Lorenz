@@ -18,7 +18,7 @@ LorenzAudioProcessorEditor::LorenzAudioProcessorEditor (LorenzAudioProcessor& p,
     // Group all knobs for easier initialization
     const std::vector<fxme::FxmeKnob*> knobs = {
         &sigmaKnob, &rhoKnob, &betaKnob, &timestepKnob,
-        &targetFrequencyKnob, &kpKnob, &kiKnob, &kdKnob,
+        &targetFrequencyKnob, &kpKnob, &kiKnob, &kdKnob, &pidIntervalKnob,
         &attackKnob, &decayKnob, &sustainKnob, &releaseKnob,
         &modAmountKnob,
         &levelXKnob, &panXKnob,
@@ -217,6 +217,7 @@ void LorenzAudioProcessorEditor::resized()
     fbF1.items.add(fi(kpKnob).withFlex(1.f));
     fbF1.items.add(fi(kiKnob).withFlex(1.f));
     fbF1.items.add(fi(kdKnob).withFlex(1.f));
+    fbF1.items.add(fi(pidIntervalKnob).withFlex(1.f));
     fbAdsr.items.add(fi(attackKnob).withFlex(1.f));
     fbAdsr.items.add(fi(decayKnob).withFlex(1.f));
     fbAdsr.items.add(fi(sustainKnob).withFlex(1.f));

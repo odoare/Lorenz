@@ -32,7 +32,7 @@ public:
      * @param currentValue The measured value from the process.
      * @return The calculated control signal adjustment.
      */
-    float process(float targetValue, float currentValue);
+    float process(float targetValue, float currentValue, float dt);
 
     /** Resets the controller's internal state (integral and derivative terms). */
     void reset();

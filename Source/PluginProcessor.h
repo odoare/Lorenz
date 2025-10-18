@@ -153,6 +153,7 @@ private:
     std::atomic<float>* kiParam = nullptr;
     std::atomic<float>* kdParam = nullptr;
     std::atomic<float>* pitchSourceParam = nullptr;
+    std::atomic<float>* pidIntervalParam = nullptr;
 
     std::atomic<float>* mxParam = nullptr;
     std::atomic<float>* myParam = nullptr;
@@ -176,6 +177,8 @@ private:
     // --- PID Controller for Timestep ---
     PIDController pidController;
     float dtTarget = 0.001f; // The value we are driving dt towards
+
+    double timeSinceLastPidUpdate = 0.0;
 
     // Buffer for frequency analysis
     juce::AudioBuffer<float> analysisBuffer;

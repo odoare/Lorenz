@@ -48,8 +48,8 @@ LorenzAudioProcessor::LorenzAudioProcessor()
       kiParam(apvts.getRawParameterValue("KI")),
       kdParam(apvts.getRawParameterValue("KD")),
       pitchSourceParam(apvts.getRawParameterValue("PITCH_SOURCE")),
-      pitchDetector(44100.0, PITCHBUFFERSIZE), // Initialize with a default sample rate
-      mxParam(apvts.getRawParameterValue("MX")), //
+      pidIntervalParam(apvts.getRawParameterValue("PID_INTERVAL")),
+      pitchDetector(44100.0, PITCHBUFFERSIZE), mxParam(apvts.getRawParameterValue("MX")), //
       myParam(apvts.getRawParameterValue("MY")),
       mzParam(apvts.getRawParameterValue("MZ")),
       cxParam(apvts.getRawParameterValue("CX")),
@@ -213,6 +213,7 @@ void LorenzAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
 
     // Prepare PID controller
     pidController.setIntegralLimits(-0.001f, 0.001f);
+    timeSinceLastPidUpdate = 0.0;
 
     // Prepare smoothed values with a ramp length
     const double rampTimeSeconds = 0.05;
@@ -417,6 +418,7 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     const float panZ = panZParam->load();
     const float outputLevel = juce::Decibels::decibelsToGain(outputLevelParam->load());
     const float targetFrequency = targetFrequencyParam->load();
+    const float pidUpdateIntervalSeconds = pidIntervalParam->load();
     
     // Set target values for smoothed parameters at the start of the block
     smoothedLevelX.setTargetValue (levelX);
@@ -431,6 +433,8 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     const float xScale = 0.025f;
     const float yScale = 0.025f;
     const float zScale = 0.0125f;
+
+    const double sampleDurationSeconds = 1.0 / processSampleRate;
 
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
     {
@@ -468,6 +472,31 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
             }
         }
 
+        // --- PID Controller (run at fixed interval, checked per-sample) ---
+        timeSinceLastPidUpdate += sampleDurationSeconds;
+
+        // Only run the PID controller if a note is being played (targetFrequency > 0)
+        // and the ADSR is not in its idle state.
+        if (targetFrequency > 0.0f && ampAdsr.isActive())
+        {
+            // Run the PID controller at a fixed interval
+            while (timeSinceLastPidUpdate >= pidUpdateIntervalSeconds)
+            {
+                // Update PID gains
+                pidController.setGains(kpParam->load(), kiParam->load(), kdParam->load());
+
+                // Calculate control adjustment using the fixed time step
+                const float adjustment = pidController.process(targetFrequency, measuredFrequency.load(), pidUpdateIntervalSeconds);
+
+                dtTarget += adjustment;
+                dtTarget = timestepRangedParam->getNormalisableRange().snapToLegalValue(dtTarget); // Clamp to the parameter's full legal range
+
+                timeSinceLastPidUpdate -= pidUpdateIntervalSeconds;
+            }
+            // Update the parameter with the final calculated dtTarget
+            timestepRangedParam->setValueNotifyingHost(timestepRangedParam->getNormalisableRange().convertTo0to1(dtTarget));
+        }
+
         // We need a separate buffer for the pitch analysis signal
         // to ensure it's pre-fader and pre-panner.
         float pitchSourceSample = 0.0f;
@@ -498,8 +527,6 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
             default: pitchSourceSample = static_cast<float>(x) * xScale; break;
         }
 
-        // Fill the analysis buffer for this sample.
-        // We write to our temporary block-sized buffer first.
         pitchAnalysisBlock.setSample(0, sample, pitchSourceSample);
 
         // Scale and apply gain to each component
@@ -547,26 +574,6 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
         measuredFrequency = freq;
     else
         measuredFrequency = 0.0f; // Indicate no frequency found
-
-    // Now, run the PID controller based on the new measurement to determine the timestep for the *next* block.
-    // Only run the PID controller if a note is being played (targetFrequency > 0)
-    // and the ADSR is not in its idle state.
-    if (targetFrequency > 0.0f && ampAdsr.isActive())
-    {
-        // Update PID gains
-        pidController.setGains(kpParam->load(), kiParam->load(), kdParam->load());
-
-        // Calculate control adjustment
-        const float adjustment = pidController.process(targetFrequency, measuredFrequency.load());
-
-        dtTarget += adjustment;
-        dtTarget = timestepRangedParam->getNormalisableRange().snapToLegalValue(dtTarget); // Clamp to the parameter's full legal range
-
-        // Convert the real-world value back to a normalized value (0.0 - 1.0)
-        auto normalizedValue = timestepRangedParam->getNormalisableRange().convertTo0to1(dtTarget);
-        // Set the value and notify the host and GUI listeners
-        timestepRangedParam->setValueNotifyingHost(normalizedValue);
-    }
 
     highPassFilter(buffer, 15.0f);
 
@@ -747,19 +754,19 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
     // Use a skewed range for finer control over smaller gain values.
     // Default values are set to the original stable values.
     layout.add(std::make_unique<juce::AudioParameterFloat>("KP", "Prop. Gain",
-                                                           juce::NormalisableRange<float>(0.0f, 1e-5f, 0.0f, 0.25f),
+                                                           juce::NormalisableRange<float>(0.0f, 5e-6f, 0.0f, 0.25f),
                                                            1e-6f, juce::String(), juce::AudioProcessorParameter::genericParameter,
                                                            scientificNotationStringFromValue,
                                                            scientificNotationValueFromString));
     layout.add(std::make_unique<juce::AudioParameterFloat>("KI", "Integ. Gain",
                                                            juce::NormalisableRange<float>(0.0f, 1e-6f, 0.0f, 0.25f),
-                                                           2e-8f, juce::String(), juce::AudioProcessorParameter::genericParameter,
+                                                           6e-8f, juce::String(), juce::AudioProcessorParameter::genericParameter,
                                                            scientificNotationStringFromValue,
                                                            scientificNotationValueFromString));
     // The Kd term often needs a larger magnitude than Kp to be effective.
     layout.add(std::make_unique<juce::AudioParameterFloat>("KD", "Deriv. Gain",
                                                            juce::NormalisableRange<float>(0.0f, 1e-4f, 0.0f, 0.25f),
-                                                           0.000001f, juce::String(), juce::AudioProcessorParameter::genericParameter,
+                                                           2e-7f, juce::String(), juce::AudioProcessorParameter::genericParameter,
                                                            scientificNotationStringFromValue,
                                                            scientificNotationValueFromString));
 
@@ -767,6 +774,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout LorenzAudioProcessor::create
                                                            juce::StringArray { "X", "Y", "Z" },
                                                            0)); // Default to X
 
+    // Temporary parameter for tuning
+    layout.add(std::make_unique<juce::AudioParameterFloat>("PID_INTERVAL", "PID Interval",
+                                                           juce::NormalisableRange<float>(0.001f, 0.1f, 0.001f, 0.5f),
+                                                           0.01f, "s"));
 
     // --- Mixer Parameters ---
     auto dbStringFromValue = [](float value, int)

@@ -47,6 +47,7 @@ private:
     fxme::FxmeKnob kpKnob{audioProcessor.apvts, "KP", "Kp", juce::Colours::lightgreen};
     fxme::FxmeKnob kiKnob{audioProcessor.apvts, "KI", "Ki", juce::Colours::lightgreen};
     fxme::FxmeKnob kdKnob{audioProcessor.apvts, "KD", "Kd", juce::Colours::lightgreen};
+    fxme::FxmeKnob pidIntervalKnob{audioProcessor.apvts, "PID_INTERVAL", "PID Int.", juce::Colours::orange};
 
     // ADSR Knobs
     fxme::FxmeKnob attackKnob{audioProcessor.apvts, "ATTACK", "A", juce::Colours::yellow};
