@@ -360,7 +360,10 @@ void LorenzAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
                 // If this is the first note being played, trigger the attack.
                 // Otherwise, we just change frequency (legato style).
                 if (noteStack.size() == 1)
+                {
+                    resetAudioEngineState();
                     ampAdsr.noteOn();
+                }
             }
             
             // Update target frequency based on the new note
