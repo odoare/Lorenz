@@ -3,13 +3,15 @@
 <JUCERPROJECT id="ZaoXjV" name="Lorenz" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
               pluginFormats="buildStandalone,buildVST,buildVST3" pluginManufacturerCode="FXME"
-              pluginCode="LORZ" version="0.1" companyName="FX-Mechanics" companyWebsite="www.fx-mechanics.com">
+              pluginCode="LORZ" version="0.1.2" companyName="FX-Mechanics"
+              companyWebsite="www.fx-mechanics.com">
   <MAINGROUP id="udRHH5" name="Lorenz">
     <GROUP id="{238A69A0-1600-E1B5-5106-006FF59AC2BF}" name="Presets">
       <FILE id="fs6VbN" name="AllStates.xml" compile="0" resource="1" file="Presets/AllStates.xml"/>
       <FILE id="H2FfUB" name="AllStates2.xml" compile="0" resource="1" file="Presets/AllStates2.xml"/>
       <FILE id="MdjxGr" name="AllStates3.xml" compile="0" resource="1" file="Presets/AllStates3.xml"/>
       <FILE id="qRyR8K" name="LowMach.xml" compile="0" resource="1" file="Presets/LowMach.xml"/>
+      <FILE id="NjCk4D" name="LowMach2.xml" compile="0" resource="1" file="Presets/LowMach2.xml"/>
       <FILE id="dONz4r" name="ManyStates+Vib.xml" compile="0" resource="1"
             file="Presets/ManyStates+Vib.xml"/>
       <FILE id="DPdvEs" name="ManyStates.xml" compile="0" resource="1" file="Presets/ManyStates.xml"/>
